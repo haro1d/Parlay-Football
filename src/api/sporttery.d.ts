@@ -3,7 +3,12 @@ declare module '@/api/sporttery' {
   import type { MatchListResult, TeamInsight, Match } from '@/types'
 
   export function fetchMatches(params?: Record<string, unknown>): Promise<MatchListResult>
-  export function fetchTeamInsight(matchId: number | string | null, home?: string, away?: string): Promise<TeamInsight>
+  export function fetchTeamInsight(
+    matchId: number | string | null,
+    home?: string,
+    away?: string,
+    opts?: { source?: string; homeId?: number; awayId?: number; league?: string },
+  ): Promise<TeamInsight>
   export function fetchMatch(id: number | string): Promise<Match>
   export function deriveOdds(payload: unknown): Promise<unknown>
   export function compareValue(payload: unknown): Promise<unknown>

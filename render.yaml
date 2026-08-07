@@ -1,0 +1,19 @@
+# Render 免费部署配置（实时版）
+# 用法：把本仓库推到 GitHub，在 render.com 新建 Blueprint，连上仓库即可。
+services:
+  - type: web
+    name: football-odds
+    runtime: node
+    plan: free            # 免费档：750 小时/月，闲置 15 分钟后冷启动（~30-60s）
+    region: oregon        # 离数据源近、延迟低
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "8787"
+      # 可选：填入后已结束比赛覆盖更全（api-sports.io 免费 100 次/天）
+      # - key: APIFOOTBALL_KEY
+      #   sync: false

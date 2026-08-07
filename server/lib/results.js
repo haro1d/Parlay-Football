@@ -6,11 +6,15 @@
 // list directly. The 体彩 app itself labels such historical data as
 // "数据来源于第三方", so using a real third-party results API is consistent.
 //
-// Supported providers (key via env var or a .env file next to server.js):
-//   APIFOOTBALL_KEY   -> api-sports.io  (broadest 体彩 coverage: 巴甲/巴西杯/中超…)
-//   FOOTBALL_DATA_KEY -> football-data.org (top European leagues + UCL/UEL)
-// No key present => finished matches are simply omitted (UI shows a notice,
-// never fake data).
+// Data providers (priority order):
+//   1. APIFOOTBALL_KEY   -> api-sports.io  (broadest 体彩 coverage: 巴甲/巴西杯/中超…)
+//   2. FOOTBALL_DATA_KEY -> football-data.org (top European leagues + UCL/UEL)
+//   3. (default, NO KEY) -> ESPN hidden scoreboard API. Free, no auth, covers the
+//      main 体彩 competitions (英超/西甲/巴甲/中超/日职/欧冠/欧联/解放者杯…). This is
+//      the out-of-the-box source so finished scores show immediately with zero setup.
+//
+// No provider is ever faked — if every source is unreachable, matches is simply
+// empty and the UI shows a notice.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -36,10 +40,24 @@ function loadDotEnv() {
 const TTL = 5 * 60 * 1000;
 let cache = { at: 0, data: null };
 
+// 体彩 main competitions, mapped to ESPN soccer league codes.
+// (verified reachable; 中超=chn.1, 日职=jpn.1, 巴甲=bra.1, 阿甲=arg.1, 墨超=mex.1,
+//  解放者杯=conmebol.libertadores, 欧冠=uefa.champions, 欧联=uefa.europa …)
+const ESPN_LEAGUES = [
+  "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", // 五大联赛
+  "uefa.champions", "uefa.europa", // 欧冠 / 欧联
+  "bra.1", "arg.1", "mex.1", // 巴甲 / 阿甲 / 墨超
+  "chn.1", "jpn.1", "kor.1", // 中超 / 日职 / 韩K
+  "conmebol.libertadores", // 解放者杯
+  "por.1", "ned.1", "sco.1", "tur.1", "bel.1", // 葡超 / 荷甲 / 苏超 / 土超 / 比甲
+  "usa.1", // MLS
+  "eng.2", "esp.2", "ger.2", "ita.2", "fra.2", // 次级联赛
+];
+
 function datesBack(n) {
   const out = [];
   const now = new Date();
-  for (let i = n; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     out.push(d.toISOString().slice(0, 10));
@@ -47,11 +65,15 @@ function datesBack(n) {
   return out;
 }
 
-// 体彩 typically covers these leagues; filtering keeps the finished list relevant
-// and avoids dumping every lower-division fixture of the day.
-const APIFB_LEAGUES = new Set([
-  2, 3, 848, 39, 140, 135, 78, 61, 71, 294, 13, 525, 45, 143, 88, 94, 9, 10, 11, 12,
-]);
+function normName(n) {
+  return (n || "").trim();
+}
+
+function pickConfig() {
+  if (process.env.APIFOOTBALL_KEY) return { provider: "apifootball", key: process.env.APIFOOTBALL_KEY };
+  if (process.env.FOOTBALL_DATA_KEY) return { provider: "football-data", key: process.env.FOOTBALL_DATA_KEY };
+  return { provider: "espn", key: null };
+}
 
 async function fetchJSON(url, headers) {
   const ac = new AbortController();
@@ -67,15 +89,84 @@ async function fetchJSON(url, headers) {
   }
 }
 
-function normName(n) {
-  return (n || "").trim();
+// Run `fn` over `items` with at most `limit` concurrent in-flight calls.
+function mapLimit(items, limit, fn) {
+  const ret = new Array(items.length);
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      ret[idx] = await fn(items[idx], idx);
+    }
+  });
+  return Promise.all(workers).then(() => ret);
 }
 
-function pickConfig() {
-  if (process.env.APIFOOTBALL_KEY) return { key: process.env.APIFOOTBALL_KEY, provider: "apifootball" };
-  if (process.env.FOOTBALL_DATA_KEY) return { key: process.env.FOOTBALL_DATA_KEY, provider: "football-data" };
-  return null;
+// ---------------------------------------------------------------------------
+// ESPN (no key)
+// ---------------------------------------------------------------------------
+
+function toMatchEspn(e, lg) {
+  const c = (e.competitions && e.competitions[0]) || {};
+  const comps = c.competitors || [];
+  const h = comps.find((x) => x.homeAway === "home") || {};
+  const a = comps.find((x) => x.homeAway === "away") || {};
+  const homeName = (h.team && (h.team.displayName || h.team.shortDisplayName)) || "";
+  const awayName = (a.team && (a.team.displayName || a.team.shortDisplayName)) || "";
+  const homeId = Number(h.team && h.team.id) || null;
+  const awayId = Number(a.team && a.team.id) || null;
+  const hs = h.score != null ? Number(h.score) : null;
+  const as = a.score != null ? Number(a.score) : null;
+  const dt = e.date || `${datesBack(1)[0]}T00:00:00Z`;
+  const d = new Date(dt);
+  const matchDate = d.toISOString().slice(0, 10);
+  const matchTime = d.toISOString().slice(11, 16);
+  const leagueName = (e.league && e.league.name) || (c.series && c.series.name) || lg;
+  return {
+    matchId: Number(e.id) || 0,
+    matchNum: 0,
+    matchNumStr: "",
+    matchNumDate: matchDate,
+    businessDate: matchDate,
+    matchDate,
+    matchTime,
+    weekday: "",
+    league: { id: 0, code: lg, abbName: normName(leagueName), allName: normName(leagueName) },
+    home: { code: "", abbName: normName(homeName), allName: normName(homeName) },
+    away: { code: "", abbName: normName(awayName), allName: normName(awayName) },
+    status: "FT",
+    statusLabel: "已完成",
+    sellStatus: "finished",
+    finished: true,
+    finalScore: `${hs ?? 0}-${as ?? 0}`,
+    resultSource: "third-party:espn",
+    homeId,
+    awayId,
+    bettingSingle: false,
+    bettingAllUp: false,
+    markets: {},
+  };
 }
+
+async function fetchEspn(dateISO, lg) {
+  const ymd = String(dateISO).replace(/-/g, "");
+  const j = await fetchJSON(
+    `https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${ymd}`,
+    { "User-Agent": "Mozilla/5.0" },
+  );
+  const ev = (j && j.events) || [];
+  return ev
+    .filter((e) => e && e.status && e.status.type && e.status.type.completed === true)
+    .map((e) => toMatchEspn(e, lg));
+}
+
+// ---------------------------------------------------------------------------
+// API-Football / football-data.org (key-based, broader coverage)
+// ---------------------------------------------------------------------------
+
+const APIFB_LEAGUES = new Set([
+  2, 3, 848, 39, 140, 135, 78, 61, 71, 294, 13, 525, 45, 143, 88, 94, 9, 10, 11, 12,
+]);
 
 async function fetchOne(dateStr, cfg) {
   if (cfg.provider === "apifootball") {
@@ -100,7 +191,7 @@ function toMatchApifb(f) {
   const sc = f.score?.fulltime || {};
   const home = g.home ?? sc.home ?? 0;
   const away = g.away ?? sc.away ?? 0;
-  const dt = f.fixture?.date || `${datesBack(0)[0]}T00:00:00Z`;
+  const dt = f.fixture?.date || `${datesBack(1)[0]}T00:00:00Z`;
   const d = new Date(dt);
   const matchDate = d.toISOString().slice(0, 10);
   const matchTime = d.toISOString().slice(11, 16);
@@ -130,7 +221,7 @@ function toMatchApifb(f) {
 
 function toMatchFd(m) {
   const sc = m.score?.fullTime || {};
-  const dt = m.utcDate || `${datesBack(0)[0]}T00:00:00Z`;
+  const dt = m.utcDate || `${datesBack(1)[0]}T00:00:00Z`;
   const d = new Date(dt);
   const matchDate = d.toISOString().slice(0, 10);
   const matchTime = d.toISOString().slice(11, 16);
@@ -158,23 +249,38 @@ function toMatchFd(m) {
   };
 }
 
-export async function getFinishedMatches(daysBack = 3) {
+// ---------------------------------------------------------------------------
+
+export async function getFinishedMatches(daysBack = 2) {
   const cfg = pickConfig();
-  if (!cfg) {
-    return { matches: [], available: false, source: null, error: null };
-  }
   const now = Date.now();
   if (cache.data && now - cache.at < TTL) {
     return { ...cache.data, available: true };
   }
   try {
     const dates = datesBack(daysBack);
-    const lists = await Promise.all(dates.map((ds) => fetchOne(ds, cfg)));
-    const matches = lists.flat().filter(Boolean);
+    let matches = [];
+
+    if (cfg.provider === "espn") {
+      // 每个日期并行拉取所有联赛（并发受限，避免打爆 ESPN）
+      const perDate = await Promise.all(
+        dates.map((ds) => mapLimit(ESPN_LEAGUES, 6, (lg) => fetchEspn(ds, lg).catch(() => []))),
+      );
+      matches = perDate.flat(2).filter(Boolean);
+    } else {
+      const lists = await Promise.all(dates.map((ds) => fetchOne(ds, cfg).catch(() => [])));
+      matches = lists.flat().filter(Boolean);
+    }
+
     const data = {
       matches,
       available: true,
-      source: cfg.provider === "apifootball" ? "third-party:apifootball" : "third-party:football-data",
+      source:
+        cfg.provider === "apifootball"
+          ? "third-party:apifootball"
+          : cfg.provider === "football-data"
+            ? "third-party:football-data"
+            : "third-party:espn",
       error: null,
     };
     cache = { at: now, data };

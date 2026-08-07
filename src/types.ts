@@ -55,6 +55,8 @@ export interface Match {
   finished?: boolean
   finalScore?: string
   resultSource?: string
+  homeId?: number
+  awayId?: number
   bettingSingle: boolean
   bettingAllUp: boolean
   markets: Partial<Record<PoolCode, Market>>
@@ -79,6 +81,9 @@ export interface MatchListResult {
   finishedSource?: string | null
   finishedAvailable?: boolean
   finishedError?: string | null
+  // 静态部署回退：标记当前数据来自部署时抓取的真实快照
+  _snapshot?: boolean
+  snapshotAt?: string
   matches: Match[]
 }
 
@@ -128,14 +133,19 @@ export interface StandingsStat {
 }
 
 // A single real historical/recent match, normalized for display.
-// `score` is always shown from the CURRENT team's perspective (current:opponent).
+// `homeName`/`awayName` are the REAL team names; `score` is the OFFICIAL
+// home-away score (fullCourtGoal). `selfName` is the current team, and
+// `isSelfHome` flags whether it was the home side, so the UI can render the
+// matchup in official home-vs-away order and highlight the current team.
 export interface InsightMatch {
   matchDate: string
   tournament: string
-  opponent: string
+  homeName: string
+  awayName: string
   score: string
   result: MatchResult
-  isHome: boolean
+  isSelfHome: boolean
+  selfName: string
 }
 
 // Win/draw/loss summary for one team over a slice of matches.
@@ -152,7 +162,7 @@ export interface InsightStat {
 
 export interface RealInsight {
   demo: false
-  source: 'sporttery'
+  source: 'sporttery' | 'espn'
   head: {
     homeName: string
     awayName: string
@@ -184,6 +194,7 @@ export interface RealInsight {
 
 export interface DemoInsight {
   demo: true
+  source?: string
   home: { team: string; recent: RecentMatch[] }
   away: { team: string; recent: RecentMatch[] }
   h2h: H2HMatch[]

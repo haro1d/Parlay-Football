@@ -3,9 +3,9 @@
 // to a bundled sample snapshot when the upstream is unreachable (geo-blocked).
 
 import http from "node:http";
-import { readFile, readFileSync } from "node:fs";
+import { readFile, readFileSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, extname, normalize, sep } from "node:path";
 
 import { parseUpstream, ALL_POOLS } from "./lib/parse.js";
 import { deriveMarket, compareOdds, valueOf, round } from "./lib/derive.js";
@@ -109,7 +109,7 @@ async function getMatches(opts) {
   // Real finished matches (past days) from a third-party results API.
   let finished = { matches: [], available: true, source: null, error: null };
   try {
-    finished = await getFinishedMatches(3);
+    finished = await getFinishedMatches(2);
   } catch {
     // ignore — finished matches are optional
   }
@@ -182,12 +182,18 @@ const server = http.createServer(async (req, res) => {
     }
 
     // GET /api/team-insight?matchId=<id>&home=<name>&away=<name>
-    // matchId takes priority (real 体彩 feature data); home/away used for fallback.
+    //   &source=third-party:espn&homeId=<id>&awayId=<id>&league=<espn-code>
+    // matchId → real 体彩 feature data; ESPN params → real ESPN team data.
     if (p === "/api/team-insight" && req.method === "GET") {
       const matchId = url.searchParams.get("matchId");
       const home = url.searchParams.get("home");
       const away = url.searchParams.get("away");
-      const data = await teamInsight(matchId ? Number(matchId) : null, home, away);
+      const data = await teamInsight(matchId ? Number(matchId) : null, home, away, {
+        source: url.searchParams.get("source") || undefined,
+        homeId: url.searchParams.get("homeId") ? Number(url.searchParams.get("homeId")) : undefined,
+        awayId: url.searchParams.get("awayId") ? Number(url.searchParams.get("awayId")) : undefined,
+        league: url.searchParams.get("league") || undefined,
+      });
       return send(res, 200, { success: true, data });
     }
 
@@ -262,13 +268,75 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { success: true, data });
     }
 
+    // Serve built frontend (dist/) so this single Node process can host the
+    // whole app (same-origin /api + static). Used for PaaS deploys.
+    if (req.method === "GET") {
+      if (serveStatic(p, res)) return;
+    }
+
     return send(res, 404, { success: false, error: "not found" });
   } catch (e) {
     return send(res, 400, { success: false, error: e.message });
   }
 });
 
-server.listen(PORT, () => {
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".map": "application/json",
+};
+const DIST = join(__dirname, "..", "dist");
+
+function serveStatic(pathname, res) {
+  let rel = decodeURIComponent(pathname.split("?")[0]);
+  if (rel === "/") rel = "/index.html";
+  const target = normalize(join(DIST, rel));
+  // block path traversal outside dist/
+  if (target !== DIST && !target.startsWith(DIST + sep)) return false;
+  try {
+    const st = statSync(target);
+    if (st.isDirectory()) {
+      const idx = join(target, "index.html");
+      if (existsSync(idx)) return streamFile(idx, res);
+      return false;
+    }
+    if (st.isFile()) return streamFile(target, res);
+  } catch {
+    // fall through to SPA fallback
+  }
+  // SPA fallback: unknown route without a file extension → index.html
+  if (!extname(rel)) {
+    const idx = join(DIST, "index.html");
+    if (existsSync(idx)) return streamFile(idx, res);
+  }
+  return false;
+}
+
+function streamFile(filePath, res) {
+  const ext = extname(filePath).toLowerCase();
+  res.writeHead(200, {
+    "Content-Type": MIME[ext] || "application/octet-stream",
+    "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=86400",
+  });
+  res.end(readFileSync(filePath));
+  return true;
+}
+
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`[竞彩API] listening on http://localhost:${PORT}`);
   console.log(`[竞彩API] sample fallback ${SAMPLE ? "loaded" : "MISSING"}`);
+  console.log(`[竞彩API] static dist ${existsSync(DIST) ? "enabled" : "not built (run npm run build)"}`);
 });

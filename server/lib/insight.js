@@ -125,36 +125,42 @@ function resultFromWinner(match, teamName) {
   return w === 'away' ? '胜' : '负';
 }
 
-// one recent/recent-form row, always from `teamName`'s perspective
+// one recent/recent-form row. We keep BOTH real team names and the OFFICIAL
+// home-away score (fullCourtGoal is always home:away), plus a flag for whether
+// `teamName` is the home side and the team's own name, so the UI can render the
+// matchup in official home-vs-away order and highlight the current team.
 function toInsightMatch(raw, teamName) {
-  const isHome = raw.homeTeamShortName === teamName;
-  const opponent = isHome ? raw.awayTeamShortName : raw.homeTeamShortName;
-  const rawScore = raw.fullCourtGoal || '';
-  const score = isHome ? rawScore : flip(rawScore);
+  const homeName = str(raw.homeTeamShortName);
+  const awayName = str(raw.awayTeamShortName);
+  const score = str(raw.fullCourtGoal || '');
+  const isHome = homeName === teamName;
   const result = mapTeamResult(raw.teamMatchResult) || resultFromWinner(raw, teamName);
   return {
     matchDate: str(raw.matchDate),
     tournament: str(raw.tournamentShortName),
-    opponent: str(opponent),
-    score: str(score),
+    homeName,
+    awayName,
+    score,
     result,
-    isHome,
+    isSelfHome: isHome,
+    selfName: str(teamName),
   };
 }
 
-// one H2H row, always from the perspective of `primary` (current home team)
+// one H2H row, from the perspective of `primary` (current home team) for the result.
 function toH2HMatch(raw, primary) {
-  const isHome = raw.homeTeamShortName === primary;
-  const opponent = isHome ? raw.awayTeamShortName : raw.homeTeamShortName;
-  const rawScore = raw.fullCourtGoal || '';
-  const score = isHome ? rawScore : flip(rawScore);
+  const homeName = str(raw.homeTeamShortName);
+  const awayName = str(raw.awayTeamShortName);
+  const score = str(raw.fullCourtGoal || '');
   return {
     matchDate: str(raw.matchDate),
     tournament: str(raw.tournamentShortName),
-    opponent: str(opponent),
-    score: str(score),
+    homeName,
+    awayName,
+    score,
     result: resultFromWinner(raw, primary),
-    isHome,
+    isSelfHome: homeName === primary,
+    selfName: str(primary),
   };
 }
 
@@ -312,8 +318,147 @@ function synthetic(homeName, awayName) {
 }
 
 // ---------------------------------------------------------------------------
+// ESPN real data (for third-party finished matches that have no 体彩 matchId)
+// ---------------------------------------------------------------------------
 
-export async function teamInsight(matchId, homeName, awayName) {
+async function fetchEspnRaw(url) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 9000);
+  try {
+    const r = await fetch(url, { signal: ac.signal, headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// One team's completed matches from ESPN's team schedule endpoint.
+function fetchEspnTeamSchedule(teamId, lg, limit = 50) {
+  return fetchEspnRaw(
+    `https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/teams/${teamId}/schedule?limit=${limit}`,
+  ).then((j) => {
+    const events = (j && j.events) || [];
+    const now = Date.now();
+    const out = [];
+    for (const e of events) {
+      const c = (e.competitions && e.competitions[0]) || {};
+      const cs = c.competitors || [];
+      const h = cs.find((x) => x.homeAway === "home") || {};
+      const a = cs.find((x) => x.homeAway === "away") || {};
+      const hs = h.score && h.score.displayValue;
+      const as = a.score && a.score.displayValue;
+      // only fully-played, past matches with numeric scores
+      if (hs == null || as == null || hs === "" || as === "") continue;
+      const homeScore = Number(hs);
+      const awayScore = Number(as);
+      if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore)) continue;
+      const d = new Date(e.date || 0);
+      if (!(d <= now)) continue;
+      out.push({
+        id: e.id,
+        date: d.toISOString().slice(0, 10),
+        homeName: (h.team && (h.team.displayName || h.team.shortDisplayName)) || "",
+        awayName: (a.team && (a.team.displayName || a.team.shortDisplayName)) || "",
+        homeScore,
+        awayScore,
+        homeWin: !!(h.score && h.score.winner),
+        awayWin: !!(a.score && a.score.winner),
+        tournament: (e.league && (e.league.shortName || e.league.name)) || (c.type && c.type.type) || "",
+      });
+    }
+    return out;
+  });
+}
+
+function perspectiveResult(ev, team) {
+  if (ev.homeScore === ev.awayScore) return "平";
+  const isHome = ev.homeName === team;
+  if (isHome) return ev.homeWin ? "胜" : "负";
+  return ev.awayWin ? "胜" : "负";
+}
+function toEspnRecentMatch(ev, teamName) {
+  return {
+    matchDate: ev.date,
+    tournament: ev.tournament || "",
+    homeName: ev.homeName,
+    awayName: ev.awayName,
+    score: `${ev.homeScore}:${ev.awayScore}`,
+    result: perspectiveResult(ev, teamName),
+    isSelfHome: ev.homeName === teamName,
+    selfName: teamName,
+  };
+}
+function toEspnH2HMatch(ev, primary) {
+  return {
+    matchDate: ev.date,
+    tournament: ev.tournament || "",
+    homeName: ev.homeName,
+    awayName: ev.awayName,
+    score: `${ev.homeScore}:${ev.awayScore}`,
+    result: perspectiveResult(ev, primary),
+    isSelfHome: ev.homeName === primary,
+    selfName: primary,
+  };
+}
+function computeStat(matches) {
+  let win = 0,
+    draw = 0,
+    loss = 0;
+  for (const m of matches) {
+    if (m.result === "胜") win++;
+    else if (m.result === "平") draw++;
+    else if (m.result === "负") loss++;
+  }
+  const total = matches.length;
+  const winPct = total ? Math.round((win / total) * 100) + "%" : "0%";
+  return { win, draw, loss, winPct, total };
+}
+
+// Build REAL insight for an ESPN finished match from its team IDs.
+async function espnInsight(homeId, awayId, lg, homeName, awayName) {
+  const [homeSched, awaySched] = await Promise.all([
+    fetchEspnTeamSchedule(homeId, lg),
+    fetchEspnTeamSchedule(awayId, lg),
+  ]);
+  if (!homeSched.length && !awaySched.length) return null;
+
+  const homeMatches = homeSched.slice(0, 8).map((ev) => toEspnRecentMatch(ev, homeName));
+  const awayMatches = awaySched.slice(0, 8).map((ev) => toEspnRecentMatch(ev, awayName));
+  // H2H: matches that appear in BOTH teams' schedules (same event id).
+  const awayIds = new Set(awaySched.map((e) => e.id));
+  const h2hEvents = homeSched.filter((e) => awayIds.has(e.id)).slice(0, 6);
+  const h2hMatches = h2hEvents.map((ev) => toEspnH2HMatch(ev, homeName));
+
+  const noFeature = { last: undefined, sameHomeAway: undefined, eachHomeAway: undefined, eachSameHomeAway: undefined, goalAvg: undefined };
+  return {
+    demo: false,
+    source: "espn",
+    head: { homeName: homeName || "", awayName: awayName || "" },
+    feature: noFeature,
+    h2h: { primary: homeName || "", stat: computeStat(h2hMatches), matches: h2hMatches },
+    recent: {
+      home: { teamName: homeName || "", stat: computeStat(homeMatches), matches: homeMatches },
+      away: { teamName: awayName || "", stat: computeStat(awayMatches), matches: awayMatches },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+
+export async function teamInsight(matchId, homeName, awayName, opts = {}) {
+  // Third-party finished match (ESPN): real data from ESPN team APIs.
+  // These have no 体彩 matchId, so we use the ESPN team IDs directly.
+  if (opts && opts.homeId && opts.awayId && opts.league) {
+    try {
+      const r = await espnInsight(opts.homeId, opts.awayId, opts.league, homeName, awayName);
+      if (r) return r;
+    } catch {
+      // fall through
+    }
+  }
   if (matchId) {
     try {
       const [head, feature, h2h, recent] = await Promise.all([

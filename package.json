@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/server.js",
+    "start": "node server/server.js",
     "dev:all": "run-p server dev",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
     "build-only": "vite build",
+    "snapshot": "node generate-snapshot.mjs",
     "type-check": "vue-tsc --build",
     "format": "prettier --write --experimental-cli src/"
   },
