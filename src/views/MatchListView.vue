@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { fetchMatches, fetchTeamInsight } from '@/api/sporttery'
 import type { MatchListResult, PoolCode, Match, TeamInsight, MatchResult, RealInsight, DemoInsight } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
@@ -32,8 +32,8 @@ function weekdayOf(m: Match | null) {
   return (m?.matchNumStr || '').replace(/\d+$/, '')
 }
 const page = ref(1)
-const pageSize = ref(24)
-const pageSizeOptions = [12, 24, 48, 100]
+const pageSize = ref(50)
+const displayed = ref<Match[]>([])
 const errorMsg = ref('')
 
 const selected = ref<Match | null>(null)
@@ -49,11 +49,11 @@ const poolOptions: { label: string; value: PoolCode }[] = [
   { label: '半全场', value: 'hafu' },
 ]
 
-async function load() {
+async function fetchPage(append = false) {
   loading.value = true
   errorMsg.value = ''
   try {
-    result.value = await fetchMatches({
+    const res = await fetchMatches({
       pools: selectedPools.value.join(','),
       league: leagueFilter.value || undefined,
       keyword: searchKw.value || undefined,
@@ -61,11 +61,30 @@ async function load() {
       page: page.value,
       pageSize: pageSize.value,
     })
+    if (append) {
+      displayed.value = [...displayed.value, ...res.matches]
+    } else {
+      result.value = res
+      displayed.value = res.matches
+    }
   } catch (e: any) {
     errorMsg.value = e.message || '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+// 首次加载 / 筛选变化：重置到第 1 页并替换列表
+async function loadInitial() {
+  page.value = 1
+  await fetchPage(false)
+}
+
+// 滚动到底：加载下一页并追加
+async function loadMore() {
+  if (loading.value || noMore.value) return
+  page.value += 1
+  await fetchPage(true)
 }
 
 async function selectMatch(m: Match) {
@@ -88,16 +107,7 @@ async function selectMatch(m: Match) {
 }
 
 function onFilterChange() {
-  page.value = 1
-  load()
-}
-function onPageChange(p: number) {
-  page.value = p
-  load()
-}
-function onPageSizeChange() {
-  page.value = 1
-  load()
+  loadInitial()
 }
 
 const resultType: Record<MatchResult, '' | 'success' | 'info' | 'danger'> = {
@@ -140,8 +150,21 @@ const finishedTagText = computed(() => {
 })
 
 const totalPages = computed(() => (result.value ? Math.ceil(result.value.total / pageSize.value) : 1))
+const noMore = computed(() => !result.value || page.value >= totalPages.value)
 
-onMounted(load)
+// 监听整页滚动，临近底部时自动加载下一页
+function handleScroll() {
+  if (loading.value || noMore.value) return
+  const el = document.documentElement
+  const reachedBottom = el.scrollTop + window.innerHeight >= el.scrollHeight - 240
+  if (reachedBottom) loadMore()
+}
+
+onMounted(() => {
+  loadInitial()
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 </script>
 
 <template>
@@ -177,10 +200,7 @@ onMounted(load)
           <el-option label="即将开赛优先（最近的在上）" value="near" />
           <el-option label="时间正序（最早在上）" value="asc" />
         </el-select>
-        <el-select v-model="pageSize" style="width: 120px" @change="onPageSizeChange">
-          <el-option v-for="s in pageSizeOptions" :key="s" :label="`${s} 条/页`" :value="s" />
-        </el-select>
-        <el-button type="primary" :loading="loading" @click="load">刷新</el-button>
+        <el-button type="primary" :loading="loading" @click="loadInitial">刷新</el-button>
         <span v-if="result" class="meta-info">
           共 {{ result.total }} 场 ·
           <el-tag v-if="result.source === 'live-sporttery'" type="success" size="small" effect="dark">实时 · 体彩官方</el-tag>
@@ -196,9 +216,9 @@ onMounted(load)
       </div>
     </el-card>
 
-    <div v-loading="loading" class="cards">
+    <div v-loading="loading && page === 1" class="cards">
       <el-card
-        v-for="m in result?.matches || []"
+        v-for="m in displayed"
         :key="m.matchId"
         shadow="hover"
         class="match-card"
@@ -237,15 +257,10 @@ onMounted(load)
 
     <el-empty v-if="!loading && result && !result.total" description="暂无比赛数据" />
 
-    <div class="pager">
-      <el-pagination
-        :current-page="page"
-        :page-size="pageSize"
-        :total="result?.total || 0"
-        :page-count="totalPages"
-        layout="prev, pager, next, jumper, total"
-        @current-change="onPageChange"
-      />
+    <div class="load-more">
+      <span v-if="loading && page > 1" class="lm-state">加载中…</span>
+      <span v-else-if="noMore && displayed.length" class="lm-state">— 没有更多了 —</span>
+      <span v-else-if="displayed.length" class="lm-tip">下拉到页面底部自动加载更多</span>
     </div>
 
     <!-- 抽屉：点击比赛后展示详情、近期战绩与历史交锋 -->
@@ -617,6 +632,19 @@ onMounted(load)
   margin-top: 16px;
   display: flex;
   justify-content: center;
+}
+.load-more {
+  margin: 18px 0 8px;
+  text-align: center;
+  min-height: 24px;
+}
+.lm-state {
+  color: #2563eb;
+  font-size: 13px;
+}
+.lm-tip {
+  color: #9ca3af;
+  font-size: 12px;
 }
 .drawer {
   padding: 4px;
