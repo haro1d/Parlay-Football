@@ -3,16 +3,22 @@ import { ref, onMounted, computed } from 'vue'
 import { fetchMatches, fetchTeamInsight } from '@/api/sporttery'
 import type { MatchListResult, PoolCode, Match, TeamInsight, MatchResult, RealInsight, DemoInsight } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
+import { zhTeam, zhLeagueName } from '@/translate'
 
 const loading = ref(false)
 const result = ref<MatchListResult | null>(null)
 const selectedPools = ref<PoolCode[]>(['had', 'hhad'])
 const leagueFilter = ref('')
 const searchKw = ref('')
-const sortOrder = ref<'results' | 'near' | 'desc' | 'asc'>('results')
+const sortOrder = ref<'results' | 'near' | 'asc'>('results')
 
 function fmtMD(d: string) {
   return d ? d.slice(5) : ''
+}
+// 详情里显示完整日期（含年份），如 2026-08-09
+function fmtMDY(d: string) {
+  if (!d) return ''
+  return d.length >= 10 ? d.slice(0, 10) : d
 }
 function fmtTime(t: string) {
   if (!t) return ''
@@ -156,7 +162,7 @@ onMounted(load)
           style="width: 220px"
           @change="onFilterChange"
         >
-          <el-option v-for="lg in result?.leagues || []" :key="lg.code + lg.abbName" :label="lg.abbName" :value="lg.abbName" />
+          <el-option v-for="lg in result?.leagues || []" :key="lg.code + lg.abbName" :label="zhLeagueName(lg)" :value="lg.abbName" />
         </el-select>
         <el-input
           v-model="searchKw"
@@ -166,11 +172,10 @@ onMounted(load)
           @keyup.enter="onFilterChange"
           @clear="onFilterChange"
         />
-        <el-select v-model="sortOrder" style="width: 170px" @change="onFilterChange">
-          <el-option label="赛果优先（已结束最新在上）" value="results" />
-          <el-option label="临近优先（未来+近两日）" value="near" />
-          <el-option label="最新优先" value="desc" />
-          <el-option label="最早优先" value="asc" />
+        <el-select v-model="sortOrder" style="width: 200px" @change="onFilterChange">
+          <el-option label="已结束优先（最新在上）" value="results" />
+          <el-option label="即将开赛优先（最近的在上）" value="near" />
+          <el-option label="时间正序（最早在上）" value="asc" />
         </el-select>
         <el-select v-model="pageSize" style="width: 120px" @change="onPageSizeChange">
           <el-option v-for="s in pageSizeOptions" :key="s" :label="`${s} 条/页`" :value="s" />
@@ -201,20 +206,20 @@ onMounted(load)
       >
         <div class="match-top">
           <span class="num">{{ weekdayOf(m) }}</span>
-          <span class="league">{{ m.league.abbName }}</span>
+          <span class="league">{{ zhLeagueName(m.league) }}</span>
           <el-tag v-if="m.statusLabel === '已开售'" size="small" type="success" effect="plain">已开售</el-tag>
           <el-tag v-else size="small" type="info" effect="plain">已完成</el-tag>
           <span class="time">{{ fmtMD(m.matchDate) }} {{ fmtTime(m.matchTime) }}</span>
         </div>
         <div class="teams">
           <div class="team">
-            <span class="t-name">{{ m.home.abbName }}</span>
+            <span class="t-name">{{ zhTeam(m.home.abbName) }}</span>
             <span v-if="m.home.rank" class="t-rank">[{{ m.home.rank }}]</span>
           </div>
           <span v-if="m.finished" class="score-final">{{ m.finalScore }}</span>
           <span v-else class="vs">VS</span>
           <div class="team">
-            <span class="t-name">{{ m.away.abbName }}</span>
+            <span class="t-name">{{ zhTeam(m.away.abbName) }}</span>
             <span v-if="m.away.rank" class="t-rank">[{{ m.away.rank }}]</span>
           </div>
         </div>
@@ -248,7 +253,7 @@ onMounted(load)
       <template v-if="selected">
         <div class="drawer">
           <div class="head">
-            <span class="league">{{ selected.league.allName }}</span>
+            <span class="league">{{ zhLeagueName(selected.league) }}</span>
             <el-tag v-if="insight?.demo" size="small" type="warning" effect="plain">演示数据</el-tag>
             <el-tag v-else-if="insight?.source === 'espn'" size="small" type="success" effect="dark">真实数据 · ESPN</el-tag>
             <el-tag v-else size="small" type="success" effect="dark">真实数据 · 体彩官方</el-tag>
@@ -264,17 +269,17 @@ onMounted(load)
           />
           <div class="scoreline">
             <div class="side-t">
-              <span class="name">{{ selected.home.abbName }}</span>
+              <span class="name">{{ zhTeam(selected.home.abbName) }}</span>
               <span v-if="selected.home.rank" class="rank">[{{ selected.home.rank }}]</span>
             </div>
             <span class="vs">VS</span>
             <div class="side-t">
-              <span class="name">{{ selected.away.abbName }}</span>
+              <span class="name">{{ zhTeam(selected.away.abbName) }}</span>
               <span v-if="selected.away.rank" class="rank">[{{ selected.away.rank }}]</span>
             </div>
           </div>
           <div class="when">
-            {{ selected.statusLabel }} · {{ weekdayOf(selected) }} {{ fmtMD(selected.matchDate) }} {{ fmtTime(selected.matchTime) }}
+            {{ selected.statusLabel }} · {{ weekdayOf(selected) }} {{ fmtMDY(selected.matchDate) }} {{ fmtTime(selected.matchTime) }}
           </div>
 
             <!-- 真实特征分析（体彩官方 getMatchFeatureV1） -->
@@ -285,12 +290,12 @@ onMounted(load)
                   <div v-for="fb in featureBlocks" :key="fb.key" class="feature-box">
                     <div class="fb-title">{{ fb.title }}</div>
                     <div class="fb-row">
-                      <span class="side home">{{ real.head.homeName }}</span>
+                      <span class="side home">{{ zhTeam(real.head.homeName) }}</span>
                       <span class="wl">{{ fb.stat?.homeWin }}胜{{ fb.stat?.homeDraw }}平{{ fb.stat?.homeLoss }}负</span>
                       <span class="rate">胜率 {{ fb.stat?.homeWinRate }}%</span>
                     </div>
                     <div class="fb-row">
-                      <span class="side away">{{ real.head.awayName }}</span>
+                      <span class="side away">{{ zhTeam(real.head.awayName) }}</span>
                       <span class="wl">{{ fb.stat?.awayWin }}胜{{ fb.stat?.awayDraw }}平{{ fb.stat?.awayLoss }}负</span>
                       <span class="rate">胜率 {{ fb.stat?.awayWinRate }}%</span>
                     </div>
@@ -301,13 +306,13 @@ onMounted(load)
             <template v-if="standings">
               <el-divider content-position="left">积分榜</el-divider>
               <div class="stand-row">
-                <span class="side home">{{ real.head.homeName }}</span>
+                <span class="side home">{{ zhTeam(real.head.homeName) }}</span>
                 <span v-if="standings.home.ranking" class="rank">第 {{ standings.home.ranking }} 名</span>
                 <span class="wl">{{ standings.home.win }}胜{{ standings.home.draw }}平{{ standings.home.loss }}负</span>
                 <span v-if="standings.home.seasonName" class="season">{{ standings.home.seasonName }}</span>
               </div>
               <div class="stand-row">
-                <span class="side away">{{ real.head.awayName }}</span>
+                <span class="side away">{{ zhTeam(real.head.awayName) }}</span>
                 <span v-if="standings.away.ranking" class="rank">第 {{ standings.away.ranking }} 名</span>
                 <span class="wl">{{ standings.away.win }}胜{{ standings.away.draw }}平{{ standings.away.loss }}负</span>
                 <span v-if="standings.away.seasonName" class="season">{{ standings.away.seasonName }}</span>
@@ -315,7 +320,7 @@ onMounted(load)
             </template>
 
             <!-- 真实逐场比分：近期战绩 + 历史交锋 -->
-            <el-divider content-position="left">主队近期战绩 · {{ real.recent.home.teamName }}</el-divider>
+            <el-divider content-position="left">主队近期战绩 · {{ zhTeam(real.recent.home.teamName) }}</el-divider>
             <div class="stat-line" v-if="real.recent.home.stat.total">
               近{{ real.recent.home.stat.total }}场：
               <b>{{ real.recent.home.stat.win }}胜{{ real.recent.home.stat.draw }}平{{ real.recent.home.stat.loss }}负</b>
@@ -323,15 +328,15 @@ onMounted(load)
               <template v-if="real.recent.home.stat.goalFor !== undefined">· 进{{ real.recent.home.stat.goalFor }}失{{ real.recent.home.stat.goalAgainst }}</template>
             </div>
             <el-table v-loading="insightLoading" v-if="real.recent.home.matches.length" :data="real.recent.home.matches" size="small" class="insight-table">
-              <el-table-column label="日期" width="62">
-                <template #default="{ row }">{{ fmtMD(row.matchDate) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
               <el-table-column label="赛事" width="60" prop="tournament" />
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">
-                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ row.homeName }}</span>
+                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.homeName) }}</span>
                   <span class="am-vs"> vs </span>
-                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ row.awayName }}</span>
+                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.awayName) }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="比分" width="52" prop="score" />
@@ -343,7 +348,7 @@ onMounted(load)
             </el-table>
             <el-empty v-else description="近一年无赛事记录" :image-size="48" />
 
-            <el-divider content-position="left">客队近期战绩 · {{ real.recent.away.teamName }}</el-divider>
+            <el-divider content-position="left">客队近期战绩 · {{ zhTeam(real.recent.away.teamName) }}</el-divider>
             <div class="stat-line" v-if="real.recent.away.stat.total">
               近{{ real.recent.away.stat.total }}场：
               <b>{{ real.recent.away.stat.win }}胜{{ real.recent.away.stat.draw }}平{{ real.recent.away.stat.loss }}负</b>
@@ -351,15 +356,15 @@ onMounted(load)
               <template v-if="real.recent.away.stat.goalFor !== undefined">· 进{{ real.recent.away.stat.goalFor }}失{{ real.recent.away.stat.goalAgainst }}</template>
             </div>
             <el-table v-loading="insightLoading" v-if="real.recent.away.matches.length" :data="real.recent.away.matches" size="small" class="insight-table">
-              <el-table-column label="日期" width="62">
-                <template #default="{ row }">{{ fmtMD(row.matchDate) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
               <el-table-column label="赛事" width="60" prop="tournament" />
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">
-                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ row.homeName }}</span>
+                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.homeName) }}</span>
                   <span class="am-vs"> vs </span>
-                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ row.awayName }}</span>
+                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.awayName) }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="比分" width="52" prop="score" />
@@ -371,22 +376,22 @@ onMounted(load)
             </el-table>
             <el-empty v-else description="近一年无赛事记录" :image-size="48" />
 
-            <el-divider content-position="left">历史交锋 · 结果按 {{ real.h2h.primary }} 视角</el-divider>
+            <el-divider content-position="left">历史交锋 · 结果按 {{ zhTeam(real.h2h.primary) }} 视角</el-divider>
             <div class="stat-line" v-if="real.h2h.stat.total">
               近{{ real.h2h.stat.total }}场交锋：
               <b>{{ real.h2h.stat.win }}胜{{ real.h2h.stat.draw }}平{{ real.h2h.stat.loss }}负</b>
               · 胜率 {{ real.h2h.stat.winPct }}
             </div>
             <el-table v-loading="insightLoading" v-if="real.h2h.matches.length" :data="real.h2h.matches" size="small" class="insight-table">
-              <el-table-column label="日期" width="62">
-                <template #default="{ row }">{{ fmtMD(row.matchDate) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
               <el-table-column label="赛事" width="60" prop="tournament" />
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">
-                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ row.homeName }}</span>
+                  <span :class="row.homeName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.homeName) }}</span>
                   <span class="am-vs"> vs </span>
-                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ row.awayName }}</span>
+                  <span :class="row.awayName === row.selfName ? 'am-self' : 'am-opp'">{{ zhTeam(row.awayName) }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="比分" width="52" prop="score" />
@@ -410,8 +415,8 @@ onMounted(load)
           <template v-else-if="demo">
             <el-divider content-position="left">主队近期战绩</el-divider>
             <el-table v-loading="insightLoading" :data="demo?.home.recent || []" size="small">
-              <el-table-column label="日期" width="64">
-                <template #default="{ row }">{{ fmtMD(row.date) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.date) }}</template>
               </el-table-column>
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">
@@ -432,8 +437,8 @@ onMounted(load)
 
             <el-divider content-position="left">客队近期战绩</el-divider>
             <el-table v-loading="insightLoading" :data="demo?.away.recent || []" size="small">
-              <el-table-column label="日期" width="64">
-                <template #default="{ row }">{{ fmtMD(row.date) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.date) }}</template>
               </el-table-column>
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">
@@ -454,8 +459,8 @@ onMounted(load)
 
             <el-divider content-position="left">历史交锋（结果按主队视角）</el-divider>
             <el-table v-loading="insightLoading" :data="demo?.h2h || []" size="small">
-              <el-table-column label="日期" width="64">
-                <template #default="{ row }">{{ fmtMD(row.date) }}</template>
+              <el-table-column label="日期" width="80">
+                <template #default="{ row }">{{ fmtMDY(row.date) }}</template>
               </el-table-column>
               <el-table-column label="对阵" min-width="160">
                 <template #default="{ row }">{{ row.home }} vs {{ row.away }}</template>

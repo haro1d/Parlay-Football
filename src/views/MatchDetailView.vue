@@ -5,6 +5,7 @@ import { fetchMatch } from '@/api/sporttery'
 import type { Match, PoolCode, Market } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
 import ProbabilityChart from '@/components/ProbabilityChart.vue'
+import { zhTeam, zhLeagueName } from '@/translate'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,18 +61,18 @@ onMounted(load)
         <div class="head">
           <div>
             <span class="num">{{ match.matchNumStr }}</span>
-            <span class="league">{{ match.league.allName }}</span>
+            <span class="league">{{ zhLeagueName(match.league) }}</span>
           </div>
           <span class="time">{{ match.matchDate }} {{ match.matchTime }}</span>
         </div>
         <div class="scoreline">
           <div class="side">
-            <span class="name">{{ match.home.abbName }}</span>
+            <span class="name">{{ zhTeam(match.home.abbName) }}</span>
             <span v-if="match.home.rank" class="rank">[{{ match.home.rank }}]</span>
           </div>
           <span class="vs">VS</span>
           <div class="side">
-            <span class="name">{{ match.away.abbName }}</span>
+            <span class="name">{{ zhTeam(match.away.abbName) }}</span>
             <span v-if="match.away.rank" class="rank">[{{ match.away.rank }}]</span>
           </div>
         </div>
