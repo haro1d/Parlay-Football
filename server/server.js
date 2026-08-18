@@ -77,14 +77,16 @@ async function fetchUpstream() {
     })
     if (!r.ok) throw new Error(`upstream HTTP ${r.status}`)
     const j = await r.json()
-    // 竞彩处于「停止销售」状态时，接口只返回 vtoolsConfig（含停售提示），
-    // 不含 matchInfoList —— 这是官方状态，并非接口故障。
+    // 关键：竞彩在「有在售/即将开赛赛事」时，响应里也会常驻携带 vtoolsConfig 的停售提示文案，
+    // 因此必须以 matchInfoList 是否真的有数据为准，不能一见停售文案就判定停售。
+    const list = j?.value?.matchInfoList || []
+    if (list.length) return j // 有真实赛事 → 视为实时数据
+    // 仅当 matchInfoList 为空时，才按停售文案降级（每日 11 点前的真正停售期）。
     const stop =
       j?.value?.vtoolsConfig?.onLineStopMessage ||
       j?.value?.vtoolsConfig?.offLineStopMessage
     if (stop) throw new Error(stop)
-    if (!j?.value?.matchInfoList?.length) throw new Error('空数据')
-    return j
+    throw new Error('空数据')
   } finally {
     clearTimeout(timer)
   }
