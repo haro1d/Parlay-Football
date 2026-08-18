@@ -37,3 +37,6 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Sporttery finished-match scan cache (runtime, 自动生成)
+.sporttery-store.json

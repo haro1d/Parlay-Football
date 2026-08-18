@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { fetchMatches, fetchTeamInsight } from '@/api/sporttery'
 import type { MatchListResult, PoolCode, Match, TeamInsight, MatchResult, RealInsight, DemoInsight } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
+import MatchResultGrid from '@/components/MatchResultGrid.vue'
 import { zhTeam, zhLeagueName } from '@/translate'
 
 const loading = ref(false)
@@ -140,14 +141,60 @@ const demo = computed(() =>
   insight.value && insight.value.demo ? (insight.value as DemoInsight) : null,
 )
 
-// 已结束赛果来源标签（ESPN 免 Key 默认可用，配 Key 后用更全的源）
+// 已结束赛果来源标签（体彩官方优先，ESPN 免 Key 默认可用，配 Key 后用更全的源）
 const finishedTagText = computed(() => {
   const s = result.value?.finishedSource
+  if (s === 'sporttery:fixedBonus') return '赛果 · 体彩官方'
   if (s === 'third-party:espn') return '近两日赛果 · ESPN(免费)'
   if (s === 'third-party:apifootball') return '近两日赛果 · API-Football'
   if (s === 'third-party:football-data') return '近两日赛果 · football-data'
   return ''
 })
+
+// 单场已结束赛果来源中文标签
+function sourceLabel(s?: string) {
+  if (s === 'sporttery:fixedBonus') return '体彩官方'
+  if (s === 'third-party:espn') return 'ESPN'
+  if (s === 'third-party:apifootball') return 'API-Football'
+  if (s === 'third-party:football-data') return 'football-data'
+  return '第三方'
+}
+
+// 胜平负历史赔率走势（仅 HAD 三项赔率，形状稳定）
+// 自行对比相邻条目计算涨跌箭头（官方 hf/df/af 标志含义不稳定）
+const hadHistory = computed(() => {
+  const h = selected.value?.oddsHistory?.had
+  if (!h || !h.length) return []
+  const arrow = (cur: string, prev: string | undefined) => {
+    if (!prev) return ''
+    const c = Number(cur), p = Number(prev)
+    if (!isFinite(c) || !isFinite(p)) return ''
+    if (c > p) return 'up'
+    if (c < p) return 'down'
+    return ''
+  }
+  return h.map((e, i) => {
+    const prev = i > 0 ? h[i - 1] : undefined
+    return {
+      updateDate: e.updateDate,
+      updateTime: e.updateTime,
+      h: e.h, d: e.d, a: e.a,
+      hTrend: arrow(e.h, prev?.h),
+      dTrend: arrow(e.d, prev?.d),
+      aTrend: arrow(e.a, prev?.a),
+    }
+  })
+})
+function trendColor(t: string) {
+  if (t === 'up') return '#ef4444' // 涨 = 红 (中国习惯)
+  if (t === 'down') return '#22c55e' // 跌 = 绿
+  return '#111827'
+}
+function trendIcon(t: string) {
+  if (t === 'up') return ' ↑'
+  if (t === 'down') return ' ↓'
+  return ''
+}
 
 const totalPages = computed(() => (result.value ? Math.ceil(result.value.total / pageSize.value) : 1))
 const noMore = computed(() => !result.value || page.value >= totalPages.value)
@@ -177,24 +224,13 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
         </el-checkbox-group>
       </div>
       <div class="filters second">
-        <el-select
-          v-model="leagueFilter"
-          placeholder="按联赛筛选（英超/欧冠/世界杯…）"
-          clearable
-          filterable
-          style="width: 220px"
-          @change="onFilterChange"
-        >
-          <el-option v-for="lg in result?.leagues || []" :key="lg.code + lg.abbName" :label="zhLeagueName(lg)" :value="lg.abbName" />
+        <el-select v-model="leagueFilter" placeholder="按联赛筛选（英超/欧冠/世界杯…）" clearable filterable style="width: 220px"
+          @change="onFilterChange">
+          <el-option v-for="lg in result?.leagues || []" :key="lg.code + lg.abbName" :label="zhLeagueName(lg)"
+            :value="lg.abbName" />
         </el-select>
-        <el-input
-          v-model="searchKw"
-          placeholder="搜索球队"
-          clearable
-          style="width: 180px"
-          @keyup.enter="onFilterChange"
-          @clear="onFilterChange"
-        />
+        <el-input v-model="searchKw" placeholder="搜索球队" clearable style="width: 180px" @keyup.enter="onFilterChange"
+          @clear="onFilterChange" />
         <el-select v-model="sortOrder" style="width: 200px" @change="onFilterChange">
           <el-option label="已结束优先（最新在上）" value="results" />
           <el-option label="即将开赛优先（最近的在上）" value="near" />
@@ -206,8 +242,10 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
           <el-tag v-if="result.source === 'live-sporttery'" type="success" size="small" effect="dark">实时 · 体彩官方</el-tag>
           <el-tag v-else type="warning" size="small" effect="plain">离线示例（非真实数据）</el-tag>
           <el-tag v-if="finishedTagText" type="info" size="small" effect="plain">{{ finishedTagText }}</el-tag>
-          <el-tag v-else-if="result.finishedAvailable === false" type="warning" size="small" effect="plain">近两日赛果：未配置 Key</el-tag>
-          <el-tag v-if="result._snapshot" type="info" size="small" effect="plain">静态快照 · {{ result.snapshotAt }}</el-tag>
+          <el-tag v-else-if="result.finishedAvailable === false" type="warning" size="small" effect="plain">近两日赛果：未配置
+            Key</el-tag>
+          <el-tag v-if="result._snapshot" type="info" size="small" effect="plain">静态快照 · {{ result.snapshotAt
+            }}</el-tag>
         </span>
         <el-tag v-if="result?.upstreamError" type="danger" size="small">
           官方接口不可用：{{ result.upstreamError }}（已回退示例数据）
@@ -217,13 +255,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
     </el-card>
 
     <div v-loading="loading && page === 1" class="cards">
-      <el-card
-        v-for="m in displayed"
-        :key="m.matchId"
-        shadow="hover"
-        class="match-card"
-        @click="selectMatch(m)"
-      >
+      <el-card v-for="m in displayed" :key="m.matchId" shadow="hover" class="match-card" @click="selectMatch(m)">
         <div class="match-top">
           <span class="num">{{ weekdayOf(m) }}</span>
           <span class="league">{{ zhLeagueName(m.league) }}</span>
@@ -251,7 +283,10 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
         <div v-if="!m.finished" class="odds-wrap">
           <OddsTable v-for="(mk, code) in m.markets" :key="code" :market="mk!" compact />
         </div>
-        <div v-else class="finished-note">最终比分 · 第三方赛果</div>
+        <div v-else class="finished-result">
+          <MatchResultGrid v-if="m.matchResultList?.length" :results="m.matchResultList" compact />
+          <div v-else class="finished-note">最终比分 · {{ sourceLabel(m.resultSource) }}</div>
+        </div>
       </el-card>
     </div>
 
@@ -270,18 +305,13 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
           <div class="head">
             <span class="league">{{ zhLeagueName(selected.league) }}</span>
             <el-tag v-if="insight?.demo" size="small" type="warning" effect="plain">演示数据</el-tag>
-            <el-tag v-else-if="insight?.source === 'espn'" size="small" type="success" effect="dark">真实数据 · ESPN</el-tag>
+            <el-tag v-else-if="insight?.source === 'espn'" size="small" type="success" effect="dark">真实数据 ·
+              ESPN</el-tag>
             <el-tag v-else size="small" type="success" effect="dark">真实数据 · 体彩官方</el-tag>
           </div>
-          <el-alert
-            v-if="insight?.demo"
-            type="warning"
-            :closable="false"
-            show-icon
-            class="demo-alert"
+          <el-alert v-if="insight?.demo" type="warning" :closable="false" show-icon class="demo-alert"
             title="近期战绩与历史交锋为合成演示数据"
-            description="体彩官方在售接口只提供赔率，不公开历史赛果。当前为离线合成数据；联网时会自动拉取体彩官方 getMatchFeatureV1 真实数据。"
-          />
+            description="体彩官方在售接口只提供赔率，不公开历史赛果。当前为离线合成数据；联网时会自动拉取体彩官方 getMatchFeatureV1 真实数据。" />
           <div class="scoreline">
             <div class="side-t">
               <span class="name">{{ zhTeam(selected.home.abbName) }}</span>
@@ -294,29 +324,63 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
             </div>
           </div>
           <div class="when">
-            {{ selected.statusLabel }} · {{ weekdayOf(selected) }} {{ fmtMDY(selected.matchDate) }} {{ fmtTime(selected.matchTime) }}
+            {{ selected.statusLabel }} · {{ weekdayOf(selected) }} {{ fmtMDY(selected.matchDate) }} {{
+              fmtTime(selected.matchTime) }}
           </div>
 
-            <!-- 真实特征分析（体彩官方 getMatchFeatureV1） -->
-            <template v-if="real">
-              <template v-if="featureBlocks.length">
-                <el-divider content-position="left">特征分析（体彩官方）</el-divider>
-                <div class="feature-grid">
-                  <div v-for="fb in featureBlocks" :key="fb.key" class="feature-box">
-                    <div class="fb-title">{{ fb.title }}</div>
-                    <div class="fb-row">
-                      <span class="side home">{{ zhTeam(real.head.homeName) }}</span>
-                      <span class="wl">{{ fb.stat?.homeWin }}胜{{ fb.stat?.homeDraw }}平{{ fb.stat?.homeLoss }}负</span>
-                      <span class="rate">胜率 {{ fb.stat?.homeWinRate }}%</span>
-                    </div>
-                    <div class="fb-row">
-                      <span class="side away">{{ zhTeam(real.head.awayName) }}</span>
-                      <span class="wl">{{ fb.stat?.awayWin }}胜{{ fb.stat?.awayDraw }}平{{ fb.stat?.awayLoss }}负</span>
-                      <span class="rate">胜率 {{ fb.stat?.awayWinRate }}%</span>
-                    </div>
+          <!-- 已结束比赛：体彩官方 5 玩法开奖结果 + 胜平负赔率走势 -->
+          <template v-if="selected.finished">
+            <el-divider content-position="left">
+              5 玩法开奖结果
+              <el-tag size="small" type="success" effect="dark" class="src-inline">{{ sourceLabel(selected.resultSource)
+              }}</el-tag>
+            </el-divider>
+            <MatchResultGrid :results="selected.matchResultList" />
+            <template v-if="hadHistory.length">
+              <div class="hist-title">胜平负赔率走势（共 {{ hadHistory.length }} 次调整）</div>
+              <el-table :data="hadHistory" size="small" class="hist-table">
+                <el-table-column label="时间" width="124">
+                  <template #default="{ row }">{{ fmtMDY(row.updateDate) }} {{ fmtTime(row.updateTime) }}</template>
+                </el-table-column>
+                <el-table-column label="主胜" width="96">
+                  <template #default="{ row }">
+                    <span :style="{ color: trendColor(row.hTrend) }">{{ row.h }}{{ trendIcon(row.hTrend) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="平" width="96">
+                  <template #default="{ row }">
+                    <span :style="{ color: trendColor(row.dTrend) }">{{ row.d }}{{ trendIcon(row.dTrend) }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="客胜" width="96">
+                  <template #default="{ row }">
+                    <span :style="{ color: trendColor(row.aTrend) }">{{ row.a }}{{ trendIcon(row.aTrend) }}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </template>
+          </template>
+
+          <!-- 真实特征分析（体彩官方 getMatchFeatureV1） -->
+          <template v-if="real">
+            <template v-if="featureBlocks.length">
+              <el-divider content-position="left">特征分析（体彩官方）</el-divider>
+              <div class="feature-grid">
+                <div v-for="fb in featureBlocks" :key="fb.key" class="feature-box">
+                  <div class="fb-title">{{ fb.title }}</div>
+                  <div class="fb-row">
+                    <span class="side home">{{ zhTeam(real.head.homeName) }}</span>
+                    <span class="wl">{{ fb.stat?.homeWin }}胜{{ fb.stat?.homeDraw }}平{{ fb.stat?.homeLoss }}负</span>
+                    <span class="rate">胜率 {{ fb.stat?.homeWinRate }}%</span>
+                  </div>
+                  <div class="fb-row">
+                    <span class="side away">{{ zhTeam(real.head.awayName) }}</span>
+                    <span class="wl">{{ fb.stat?.awayWin }}胜{{ fb.stat?.awayDraw }}平{{ fb.stat?.awayLoss }}负</span>
+                    <span class="rate">胜率 {{ fb.stat?.awayWinRate }}%</span>
                   </div>
                 </div>
-              </template>
+              </div>
+            </template>
 
             <template v-if="standings">
               <el-divider content-position="left">积分榜</el-divider>
@@ -340,9 +404,11 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
               近{{ real.recent.home.stat.total }}场：
               <b>{{ real.recent.home.stat.win }}胜{{ real.recent.home.stat.draw }}平{{ real.recent.home.stat.loss }}负</b>
               · 胜率 {{ real.recent.home.stat.winPct }}
-              <template v-if="real.recent.home.stat.goalFor !== undefined">· 进{{ real.recent.home.stat.goalFor }}失{{ real.recent.home.stat.goalAgainst }}</template>
+              <template v-if="real.recent.home.stat.goalFor !== undefined">· 进{{ real.recent.home.stat.goalFor }}失{{
+                real.recent.home.stat.goalAgainst }}</template>
             </div>
-            <el-table v-loading="insightLoading" v-if="real.recent.home.matches.length" :data="real.recent.home.matches" size="small" class="insight-table">
+            <el-table v-loading="insightLoading" v-if="real.recent.home.matches.length" :data="real.recent.home.matches"
+              size="small" class="insight-table">
               <el-table-column label="日期" width="80">
                 <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
@@ -368,9 +434,11 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
               近{{ real.recent.away.stat.total }}场：
               <b>{{ real.recent.away.stat.win }}胜{{ real.recent.away.stat.draw }}平{{ real.recent.away.stat.loss }}负</b>
               · 胜率 {{ real.recent.away.stat.winPct }}
-              <template v-if="real.recent.away.stat.goalFor !== undefined">· 进{{ real.recent.away.stat.goalFor }}失{{ real.recent.away.stat.goalAgainst }}</template>
+              <template v-if="real.recent.away.stat.goalFor !== undefined">· 进{{ real.recent.away.stat.goalFor }}失{{
+                real.recent.away.stat.goalAgainst }}</template>
             </div>
-            <el-table v-loading="insightLoading" v-if="real.recent.away.matches.length" :data="real.recent.away.matches" size="small" class="insight-table">
+            <el-table v-loading="insightLoading" v-if="real.recent.away.matches.length" :data="real.recent.away.matches"
+              size="small" class="insight-table">
               <el-table-column label="日期" width="80">
                 <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
@@ -397,7 +465,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
               <b>{{ real.h2h.stat.win }}胜{{ real.h2h.stat.draw }}平{{ real.h2h.stat.loss }}负</b>
               · 胜率 {{ real.h2h.stat.winPct }}
             </div>
-            <el-table v-loading="insightLoading" v-if="real.h2h.matches.length" :data="real.h2h.matches" size="small" class="insight-table">
+            <el-table v-loading="insightLoading" v-if="real.h2h.matches.length" :data="real.h2h.matches" size="small"
+              class="insight-table">
               <el-table-column label="日期" width="80">
                 <template #default="{ row }">{{ fmtMDY(row.matchDate) }}</template>
               </el-table-column>
@@ -422,7 +491,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
               数据来源：ESPN 公开赛果接口（球队赛程 / 交锋），真实逐场比分；本场为第三方赛果，非体彩官方对阵详情。
             </p>
             <p class="src-note" v-else>
-              数据来源：中国体育彩票竞彩网 getMatchHeadV1 / getMatchFeatureV1 / getResultHistoryV1 / getMatchResultV1（与体彩 App 同源，页面注明"本页面部分数据来源于第三方"）。
+              数据来源：中国体育彩票竞彩网 getMatchHeadV1 / getMatchFeatureV1 / getResultHistoryV1 / getMatchResultV1（与体彩 App
+              同源，页面注明"本页面部分数据来源于第三方"）。
             </p>
           </template>
 
@@ -491,14 +561,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 
           <!-- 静态托管无后端：详情分析不可用 -->
           <template v-else-if="!insightLoading">
-            <el-alert
-              type="info"
-              :closable="false"
-              show-icon
-              class="demo-alert"
-              title="实时分析需要后端服务"
-              description="当前为静态预览部署，未运行 Node 后端，无法拉取实时战绩与交锋。本地或 Render 部署可查看完整实时数据。"
-            />
+            <el-alert type="info" :closable="false" show-icon class="demo-alert" title="实时分析需要后端服务"
+              description="当前为静态预览部署，未运行 Node 后端，无法拉取实时战绩与交锋。本地或 Render 部署可查看完整实时数据。" />
           </template>
         </div>
       </template>
@@ -512,39 +576,48 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   flex-direction: column;
   min-height: 100%;
 }
+
 .filter-bar {
   margin-bottom: 16px;
 }
+
 .filters {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
 }
+
 .filters.second {
   margin-top: 12px;
 }
+
 .f-label {
   color: #374151;
   font-size: 14px;
 }
+
 .meta-info {
   color: #6b7280;
   font-size: 12px;
   margin-left: auto;
 }
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
 }
+
 .match-card {
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s;
 }
+
 .match-card:hover {
   transform: translateY(-2px);
 }
+
 .match-top {
   display: flex;
   align-items: center;
@@ -554,11 +627,13 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
+
 .num {
   font-weight: 700;
   color: #2563eb;
   white-space: nowrap;
 }
+
 .league {
   background: #eff6ff;
   color: #2563eb;
@@ -566,32 +641,39 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   border-radius: 4px;
   white-space: nowrap;
 }
+
 .time {
   margin-left: auto;
 }
+
 .teams {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
 }
+
 .team {
   flex: 1;
   text-align: center;
 }
+
 .t-name {
   font-size: 18px;
   font-weight: 700;
   color: #111827;
 }
+
 .t-rank {
   font-size: 12px;
   color: #9ca3af;
 }
+
 .vs {
   color: #9ca3af;
   font-size: 13px;
 }
+
 .score-final {
   color: #111827;
   font-size: 20px;
@@ -599,11 +681,33 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   letter-spacing: 1px;
   font-variant-numeric: tabular-nums;
 }
+
 .finished-note {
   font-size: 12px;
   color: #9ca3af;
   margin-top: 4px;
 }
+
+.finished-result {
+  margin-top: 4px;
+}
+
+.hist-title {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 600;
+  margin: 14px 0 6px;
+}
+
+.hist-table {
+  margin-bottom: 4px;
+}
+
+.src-inline {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .am-self {
   color: #b45309;
   font-weight: 700;
@@ -611,53 +715,65 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   padding: 0 4px;
   border-radius: 4px;
 }
+
 .am-opp {
   color: #374151;
 }
+
 .am-vs {
   color: #9ca3af;
   margin: 0 4px;
 }
+
 .tags {
   margin-bottom: 10px;
   display: flex;
   gap: 6px;
 }
+
 .odds-wrap {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 .pager {
   margin-top: 16px;
   display: flex;
   justify-content: center;
 }
+
 .load-more {
   margin: 18px 0 8px;
   text-align: center;
   min-height: 24px;
 }
+
 .lm-state {
   color: #2563eb;
   font-size: 13px;
 }
+
 .lm-tip {
   color: #9ca3af;
   font-size: 12px;
 }
+
 .drawer {
   padding: 4px;
 }
+
 .demo-alert {
   margin-bottom: 12px;
 }
+
 .drawer .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
 .drawer .scoreline {
   display: flex;
   align-items: center;
@@ -665,43 +781,51 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   gap: 24px;
   margin-bottom: 6px;
 }
+
 .side-t {
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
+
 .drawer .name {
   font-size: 20px;
   font-weight: 700;
 }
+
 .drawer .rank {
   color: #9ca3af;
   font-size: 13px;
 }
+
 .drawer .when {
   text-align: center;
   color: #9ca3af;
   font-size: 13px;
   margin-bottom: 6px;
 }
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 4px;
 }
+
 .feature-box {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 10px;
   background: #fff;
 }
+
 .fb-title {
   font-weight: 600;
   font-size: 13px;
   color: #111827;
   margin-bottom: 6px;
 }
+
 .fb-row {
   display: flex;
   align-items: center;
@@ -709,6 +833,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   font-size: 12px;
   padding: 2px 0;
 }
+
 .fb-row .side {
   width: 72px;
   flex: 0 0 72px;
@@ -716,19 +841,24 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .fb-row .side.home {
   color: #2563eb;
 }
+
 .fb-row .side.away {
   color: #dc2626;
 }
+
 .fb-row .wl {
   color: #374151;
 }
+
 .fb-row .rate {
   margin-left: auto;
   color: #6b7280;
 }
+
 .stand-row {
   display: flex;
   align-items: center;
@@ -736,41 +866,50 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   font-size: 13px;
   padding: 4px 0;
 }
+
 .stand-row .side.home {
   color: #2563eb;
   font-weight: 600;
   min-width: 84px;
 }
+
 .stand-row .side.away {
   color: #dc2626;
   font-weight: 600;
   min-width: 84px;
 }
+
 .stand-row .rank {
   color: #b45309;
 }
+
 .stand-row .wl {
   color: #374151;
 }
+
 .stand-row .season {
   margin-left: auto;
   color: #9ca3af;
   font-size: 12px;
 }
+
 .src-note {
   margin-top: 10px;
   font-size: 11px;
   color: #9ca3af;
   line-height: 1.5;
 }
+
 .stat-line {
   font-size: 12px;
   color: #374151;
   margin: 2px 0 8px;
 }
+
 .stat-line b {
   color: #111827;
 }
+
 .insight-table {
   margin-bottom: 4px;
 }

@@ -16,20 +16,20 @@
 // No provider is ever faked — if every source is unreachable, matches is simply
 // empty and the UI shows a notice.
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-loadDotEnv();
+const __dirname = dirname(fileURLToPath(import.meta.url))
+loadDotEnv()
 
 function loadDotEnv() {
   try {
-    const txt = readFileSync(join(__dirname, "..", "..", ".env"), "utf8");
+    const txt = readFileSync(join(__dirname, '..', '..', '.env'), 'utf8')
     for (const line of txt.split(/\r?\n/)) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
       if (m && m[2] !== undefined && !process.env[m[1]]) {
-        process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+        process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
       }
     }
   } catch {
@@ -37,69 +37,108 @@ function loadDotEnv() {
   }
 }
 
-const TTL = 5 * 60 * 1000;
-let cache = { at: 0, data: null };
+const TTL = 5 * 60 * 1000
+let cache = { at: 0, data: null }
 
 // 体彩 main competitions, mapped to ESPN soccer league codes.
 // (verified reachable; 中超=chn.1, 日职=jpn.1, 巴甲=bra.1, 阿甲=arg.1, 墨超=mex.1,
 //  解放者杯=conmebol.libertadores, 欧冠=uefa.champions, 欧联=uefa.europa …)
+//
+// 注意：ESPN 对中东/亚洲次级联赛覆盖很差——沙特联(沙职)、日乙、韩K2、瑞士超、波兰超
+// 等在 ESPN 没有 slug（返回 HTTP 400）。这类联赛的已结束比赛需通过 APIFOOTBALL_KEY
+// (api-sports.io) 才能补齐，ESPN 无法覆盖。
 const ESPN_LEAGUES = [
-  "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", // 五大联赛
-  "uefa.champions", "uefa.europa", // 欧冠 / 欧联
-  "bra.1", "arg.1", "mex.1", // 巴甲 / 阿甲 / 墨超
-  "chn.1", "jpn.1", "kor.1", // 中超 / 日职 / 韩K
-  "conmebol.libertadores", // 解放者杯
-  "por.1", "ned.1", "sco.1", "tur.1", "bel.1", // 葡超 / 荷甲 / 苏超 / 土超 / 比甲
-  "usa.1", // MLS
-  "eng.2", "esp.2", "ger.2", "ita.2", "fra.2", // 次级联赛
-];
+  'eng.1',
+  'esp.1',
+  'ita.1',
+  'ger.1',
+  'fra.1', // 五大联赛
+  'uefa.champions',
+  'uefa.europa',
+  'uefa.europa.conf', // 欧冠 / 欧联 / 欧协联
+  'bra.1',
+  'arg.1',
+  'mex.1', // 巴甲 / 阿甲 / 墨超
+  'chn.1',
+  'jpn.1',
+  'kor.1', // 中超 / 日职 / 韩K
+  'conmebol.libertadores',
+  'conmebol.sudamericana', // 解放者杯 / 南美杯
+  'afc.champions', // 亚冠精英
+  'por.1',
+  'ned.1',
+  'ned.2',
+  'sco.1',
+  'tur.1',
+  'bel.1', // 葡超 / 荷甲 / 荷乙 / 苏超 / 土超 / 比甲
+  'usa.1', // MLS
+  'eng.2',
+  'esp.2',
+  'ger.2',
+  'ita.2',
+  'fra.2', // 次级联赛
+  // 北欧（体彩常开售，原列表缺失）
+  'fin.1',
+  'swe.1',
+  'nor.1',
+  'den.1', // 芬超 / 瑞超 / 挪超 / 丹超
+  // 东欧 / 巴尔干（体彩偶有开售）
+  'cze.1',
+  'gre.1',
+  'rus.1',
+  'rou.1', // 捷克甲 / 希腊超 / 俄超 / 罗甲
+  // 其他
+  'aus.1', // 澳超（休赛期无数据，赛季内可覆盖）
+]
 
 function datesBack(n) {
-  const out = [];
-  const now = new Date();
+  const out = []
+  const now = new Date()
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    out.push(d.toISOString().slice(0, 10));
+    const d = new Date(now)
+    d.setDate(now.getDate() - i)
+    out.push(d.toISOString().slice(0, 10))
   }
-  return out;
+  return out
 }
 
 function normName(n) {
-  return (n || "").trim();
+  return (n || '').trim()
 }
 
 function pickConfig() {
-  if (process.env.APIFOOTBALL_KEY) return { provider: "apifootball", key: process.env.APIFOOTBALL_KEY };
-  if (process.env.FOOTBALL_DATA_KEY) return { provider: "football-data", key: process.env.FOOTBALL_DATA_KEY };
-  return { provider: "espn", key: null };
+  if (process.env.APIFOOTBALL_KEY)
+    return { provider: 'apifootball', key: process.env.APIFOOTBALL_KEY }
+  if (process.env.FOOTBALL_DATA_KEY)
+    return { provider: 'football-data', key: process.env.FOOTBALL_DATA_KEY }
+  return { provider: 'espn', key: null }
 }
 
 async function fetchJSON(url, headers) {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), 9000);
+  const ac = new AbortController()
+  const t = setTimeout(() => ac.abort(), 9000)
   try {
-    const r = await fetch(url, { signal: ac.signal, headers });
-    if (!r.ok) return null;
-    return await r.json();
+    const r = await fetch(url, { signal: ac.signal, headers })
+    if (!r.ok) return null
+    return await r.json()
   } catch {
-    return null;
+    return null
   } finally {
-    clearTimeout(t);
+    clearTimeout(t)
   }
 }
 
 // Run `fn` over `items` with at most `limit` concurrent in-flight calls.
 function mapLimit(items, limit, fn) {
-  const ret = new Array(items.length);
-  let i = 0;
+  const ret = new Array(items.length)
+  let i = 0
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
     while (i < items.length) {
-      const idx = i++;
-      ret[idx] = await fn(items[idx], idx);
+      const idx = i++
+      ret[idx] = await fn(items[idx], idx)
     }
-  });
-  return Promise.all(workers).then(() => ret);
+  })
+  return Promise.all(workers).then(() => ret)
 }
 
 // ---------------------------------------------------------------------------
@@ -107,57 +146,57 @@ function mapLimit(items, limit, fn) {
 // ---------------------------------------------------------------------------
 
 function toMatchEspn(e, lg) {
-  const c = (e.competitions && e.competitions[0]) || {};
-  const comps = c.competitors || [];
-  const h = comps.find((x) => x.homeAway === "home") || {};
-  const a = comps.find((x) => x.homeAway === "away") || {};
-  const homeName = (h.team && (h.team.displayName || h.team.shortDisplayName)) || "";
-  const awayName = (a.team && (a.team.displayName || a.team.shortDisplayName)) || "";
-  const homeId = Number(h.team && h.team.id) || null;
-  const awayId = Number(a.team && a.team.id) || null;
-  const hs = h.score != null ? Number(h.score) : null;
-  const as = a.score != null ? Number(a.score) : null;
-  const dt = e.date || `${datesBack(1)[0]}T00:00:00Z`;
-  const d = new Date(dt);
-  const matchDate = d.toISOString().slice(0, 10);
-  const matchTime = d.toISOString().slice(11, 16);
-  const leagueName = (e.league && e.league.name) || (c.series && c.series.name) || lg;
+  const c = (e.competitions && e.competitions[0]) || {}
+  const comps = c.competitors || []
+  const h = comps.find((x) => x.homeAway === 'home') || {}
+  const a = comps.find((x) => x.homeAway === 'away') || {}
+  const homeName = (h.team && (h.team.displayName || h.team.shortDisplayName)) || ''
+  const awayName = (a.team && (a.team.displayName || a.team.shortDisplayName)) || ''
+  const homeId = Number(h.team && h.team.id) || null
+  const awayId = Number(a.team && a.team.id) || null
+  const hs = h.score != null ? Number(h.score) : null
+  const as = a.score != null ? Number(a.score) : null
+  const dt = e.date || `${datesBack(1)[0]}T00:00:00Z`
+  const d = new Date(dt)
+  const matchDate = d.toISOString().slice(0, 10)
+  const matchTime = d.toISOString().slice(11, 16)
+  const leagueName = (e.league && e.league.name) || (c.series && c.series.name) || lg
   return {
     matchId: Number(e.id) || 0,
     matchNum: 0,
-    matchNumStr: "",
+    matchNumStr: '',
     matchNumDate: matchDate,
     businessDate: matchDate,
     matchDate,
     matchTime,
-    weekday: "",
+    weekday: '',
     league: { id: 0, code: lg, abbName: normName(leagueName), allName: normName(leagueName) },
-    home: { code: "", abbName: normName(homeName), allName: normName(homeName) },
-    away: { code: "", abbName: normName(awayName), allName: normName(awayName) },
-    status: "FT",
-    statusLabel: "已完成",
-    sellStatus: "finished",
+    home: { code: '', abbName: normName(homeName), allName: normName(homeName) },
+    away: { code: '', abbName: normName(awayName), allName: normName(awayName) },
+    status: 'FT',
+    statusLabel: '已完成',
+    sellStatus: 'finished',
     finished: true,
     finalScore: `${hs ?? 0}-${as ?? 0}`,
-    resultSource: "third-party:espn",
+    resultSource: 'third-party:espn',
     homeId,
     awayId,
     bettingSingle: false,
     bettingAllUp: false,
     markets: {},
-  };
+  }
 }
 
 async function fetchEspn(dateISO, lg) {
-  const ymd = String(dateISO).replace(/-/g, "");
+  const ymd = String(dateISO).replace(/-/g, '')
   const j = await fetchJSON(
     `https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard?dates=${ymd}`,
-    { "User-Agent": "Mozilla/5.0" },
-  );
-  const ev = (j && j.events) || [];
+    { 'User-Agent': 'Mozilla/5.0' },
+  )
+  const ev = (j && j.events) || []
   return ev
     .filter((e) => e && e.status && e.status.type && e.status.type.completed === true)
-    .map((e) => toMatchEspn(e, lg));
+    .map((e) => toMatchEspn(e, lg))
 }
 
 // ---------------------------------------------------------------------------
@@ -166,126 +205,144 @@ async function fetchEspn(dateISO, lg) {
 
 const APIFB_LEAGUES = new Set([
   2, 3, 848, 39, 140, 135, 78, 61, 71, 294, 13, 525, 45, 143, 88, 94, 9, 10, 11, 12,
-]);
+])
 
 async function fetchOne(dateStr, cfg) {
-  if (cfg.provider === "apifootball") {
+  if (cfg.provider === 'apifootball') {
     const j = await fetchJSON(`https://v3.football.api-sports.io/fixtures?date=${dateStr}`, {
-      "x-apisports-key": cfg.key,
-    });
-    const arr = j?.response || [];
+      'x-apisports-key': cfg.key,
+    })
+    const arr = j?.response || []
     return arr
-      .filter((f) => f && (f.fixture?.status?.short === "FT" || (f.goals && f.goals.home != null)))
+      .filter((f) => f && (f.fixture?.status?.short === 'FT' || (f.goals && f.goals.home != null)))
       .filter((f) => APIFB_LEAGUES.has(Number(f.league?.id)))
-      .map((f) => toMatchApifb(f, dateStr));
+      .map((f) => toMatchApifb(f, dateStr))
   }
   const j = await fetchJSON(`https://api.football-data.org/v4/matches?date=${dateStr}`, {
-    "X-Auth-Token": cfg.key,
-  });
-  const arr = j?.matches || [];
-  return arr.filter((m) => m.status === "FINISHED").map((m) => toMatchFd(m, dateStr));
+    'X-Auth-Token': cfg.key,
+  })
+  const arr = j?.matches || []
+  return arr.filter((m) => m.status === 'FINISHED').map((m) => toMatchFd(m, dateStr))
 }
 
 function toMatchApifb(f) {
-  const g = f.goals || {};
-  const sc = f.score?.fulltime || {};
-  const home = g.home ?? sc.home ?? 0;
-  const away = g.away ?? sc.away ?? 0;
-  const dt = f.fixture?.date || `${datesBack(1)[0]}T00:00:00Z`;
-  const d = new Date(dt);
-  const matchDate = d.toISOString().slice(0, 10);
-  const matchTime = d.toISOString().slice(11, 16);
+  const g = f.goals || {}
+  const sc = f.score?.fulltime || {}
+  const home = g.home ?? sc.home ?? 0
+  const away = g.away ?? sc.away ?? 0
+  const dt = f.fixture?.date || `${datesBack(1)[0]}T00:00:00Z`
+  const d = new Date(dt)
+  const matchDate = d.toISOString().slice(0, 10)
+  const matchTime = d.toISOString().slice(11, 16)
   return {
     matchId: Number(f.fixture?.id) || 0,
     matchNum: 0,
-    matchNumStr: "",
+    matchNumStr: '',
     matchNumDate: matchDate,
     businessDate: matchDate,
     matchDate,
     matchTime,
-    weekday: "",
-    league: { id: Number(f.league?.id) || 0, code: "", abbName: normName(f.league?.name), allName: normName(f.league?.name) },
-    home: { code: "", abbName: normName(f.teams?.home?.name), allName: normName(f.teams?.home?.name) },
-    away: { code: "", abbName: normName(f.teams?.away?.name), allName: normName(f.teams?.away?.name) },
-    status: "FT",
-    statusLabel: "已完成",
-    sellStatus: "finished",
+    weekday: '',
+    league: {
+      id: Number(f.league?.id) || 0,
+      code: '',
+      abbName: normName(f.league?.name),
+      allName: normName(f.league?.name),
+    },
+    home: {
+      code: '',
+      abbName: normName(f.teams?.home?.name),
+      allName: normName(f.teams?.home?.name),
+    },
+    away: {
+      code: '',
+      abbName: normName(f.teams?.away?.name),
+      allName: normName(f.teams?.away?.name),
+    },
+    status: 'FT',
+    statusLabel: '已完成',
+    sellStatus: 'finished',
     finished: true,
     finalScore: `${home}-${away}`,
-    resultSource: "third-party:apifootball",
+    resultSource: 'third-party:apifootball',
     bettingSingle: false,
     bettingAllUp: false,
     markets: {},
-  };
+  }
 }
 
 function toMatchFd(m) {
-  const sc = m.score?.fullTime || {};
-  const dt = m.utcDate || `${datesBack(1)[0]}T00:00:00Z`;
-  const d = new Date(dt);
-  const matchDate = d.toISOString().slice(0, 10);
-  const matchTime = d.toISOString().slice(11, 16);
+  const sc = m.score?.fullTime || {}
+  const dt = m.utcDate || `${datesBack(1)[0]}T00:00:00Z`
+  const d = new Date(dt)
+  const matchDate = d.toISOString().slice(0, 10)
+  const matchTime = d.toISOString().slice(11, 16)
   return {
     matchId: Number(m.id) || 0,
     matchNum: 0,
-    matchNumStr: "",
+    matchNumStr: '',
     matchNumDate: matchDate,
     businessDate: matchDate,
     matchDate,
     matchTime,
-    weekday: "",
-    league: { id: 0, code: "", abbName: normName(m.competition?.name), allName: normName(m.competition?.name) },
-    home: { code: "", abbName: normName(m.homeTeam?.name), allName: normName(m.homeTeam?.name) },
-    away: { code: "", abbName: normName(m.awayTeam?.name), allName: normName(m.awayTeam?.name) },
-    status: "FT",
-    statusLabel: "已完成",
-    sellStatus: "finished",
+    weekday: '',
+    league: {
+      id: 0,
+      code: '',
+      abbName: normName(m.competition?.name),
+      allName: normName(m.competition?.name),
+    },
+    home: { code: '', abbName: normName(m.homeTeam?.name), allName: normName(m.homeTeam?.name) },
+    away: { code: '', abbName: normName(m.awayTeam?.name), allName: normName(m.awayTeam?.name) },
+    status: 'FT',
+    statusLabel: '已完成',
+    sellStatus: 'finished',
     finished: true,
     finalScore: `${sc.home ?? 0}-${sc.away ?? 0}`,
-    resultSource: "third-party:football-data",
+    resultSource: 'third-party:football-data',
     bettingSingle: false,
     bettingAllUp: false,
     markets: {},
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
 
 export async function getFinishedMatches(daysBack = 2) {
-  const cfg = pickConfig();
-  const now = Date.now();
+  const cfg = pickConfig()
+  const now = Date.now()
   if (cache.data && now - cache.at < TTL) {
-    return { ...cache.data, available: true };
+    return { ...cache.data, available: true }
   }
   try {
-    const dates = datesBack(daysBack);
-    let matches = [];
+    const dates = datesBack(daysBack)
+    let matches = []
 
-    if (cfg.provider === "espn") {
+    if (cfg.provider === 'espn') {
       // 每个日期并行拉取所有联赛（并发受限，避免打爆 ESPN）
       const perDate = await Promise.all(
         dates.map((ds) => mapLimit(ESPN_LEAGUES, 6, (lg) => fetchEspn(ds, lg).catch(() => []))),
-      );
-      matches = perDate.flat(2).filter(Boolean);
+      )
+      matches = perDate.flat(2).filter(Boolean)
     } else {
-      const lists = await Promise.all(dates.map((ds) => fetchOne(ds, cfg).catch(() => [])));
-      matches = lists.flat().filter(Boolean);
+      const lists = await Promise.all(dates.map((ds) => fetchOne(ds, cfg).catch(() => [])))
+      matches = lists.flat().filter(Boolean)
     }
 
     const data = {
       matches,
       available: true,
       source:
-        cfg.provider === "apifootball"
-          ? "third-party:apifootball"
-          : cfg.provider === "football-data"
-            ? "third-party:football-data"
-            : "third-party:espn",
+        cfg.provider === 'apifootball'
+          ? 'third-party:apifootball'
+          : cfg.provider === 'football-data'
+            ? 'third-party:football-data'
+            : 'third-party:espn',
       error: null,
-    };
-    cache = { at: now, data };
-    return data;
+    }
+    cache = { at: now, data }
+    return data
   } catch (e) {
-    return { matches: [], available: true, source: null, error: e.message };
+    return { matches: [], available: true, source: null, error: e.message }
   }
 }

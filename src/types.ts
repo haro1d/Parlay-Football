@@ -37,6 +37,32 @@ export interface LeagueRef {
   allName: string
 }
 
+// 体彩官方 5 玩法开奖结果条目（来自 getFixedBonusV1 的 matchResultList）
+export interface MatchResultItem {
+  code: string // 'HAD' | 'HHAD' | 'CRS' | 'TTG' | 'HAFU'
+  combination: string
+  combinationDesc: string // '负' | '(-1)负' | '1:2' | '3' | '负负'
+  goalLine?: string
+  odds: string
+  oddsType?: string
+  refundStatus?: string
+}
+
+// 单条历史赔率快照（来自 getFixedBonusV1 的 oddsHistory.*List）
+export interface OddsHistoryEntry {
+  h: string
+  d: string
+  a: string
+  hf?: string | number
+  df?: string | number
+  af?: string | number
+  goalLine?: string
+  updateDate: string
+  updateTime: string
+}
+
+export type OddsHistory = Partial<Record<PoolCode, OddsHistoryEntry[]>>
+
 export interface Match {
   matchId: number
   matchNum: number
@@ -60,6 +86,9 @@ export interface Match {
   bettingSingle: boolean
   bettingAllUp: boolean
   markets: Partial<Record<PoolCode, Market>>
+  // 体彩官方已结束比赛：5 玩法开奖结果 + 历史赔率走势
+  matchResultList?: MatchResultItem[]
+  oddsHistory?: OddsHistory
 }
 
 export interface LeagueOption {
