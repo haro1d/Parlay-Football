@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { fetchMatches, fetchTeamInsight } from '@/api/sporttery'
 import type { MatchListResult, PoolCode, Match, TeamInsight, MatchResult, RealInsight, DemoInsight } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
@@ -79,13 +79,19 @@ async function fetchPage(append = false) {
 async function loadInitial() {
   page.value = 1
   await fetchPage(false)
+  await nextTick()
+  // 首屏内容不足一屏时，自动补满，避免底部哨兵一开始就触发
+  fillIfNeeded()
 }
 
 // 滚动到底：加载下一页并追加
 async function loadMore() {
-  if (loading.value || noMore.value) return
+  if (!needsMore()) return
   page.value += 1
   await fetchPage(true)
+  await nextTick()
+  // 追加后若哨兵仍在视口内（内容未填满一屏），继续加载直到填满
+  fillIfNeeded()
 }
 
 async function selectMatch(m: Match) {
@@ -199,23 +205,74 @@ function trendIcon(t: string) {
 const totalPages = computed(() => (result.value ? Math.ceil(result.value.total / pageSize.value) : 1))
 const noMore = computed(() => !result.value || page.value >= totalPages.value)
 
-// 监听整页滚动，临近底部时自动加载下一页
-function handleScroll() {
-  if (loading.value || noMore.value) return
-  const el = document.documentElement
-  const reachedBottom = el.scrollTop + window.innerHeight >= el.scrollHeight - 240
-  if (reachedBottom) loadMore()
+// 顶部醒目横幅：仅在「非实时官方数据」时显示，明确告知当前数据状态，避免误以为是解析错误。
+// 关键修正：竞彩每天 11 点前只是「停售新单」（当前无可投注赛事），但已结束赛果接口（体彩官方
+// getFixedBonusV1）仍可正常查询，因此停售期也应展示真实的近期赛果，而非一律回退合成示例。
+const isLive = computed(() => result.value?.source === 'live-sporttery')
+const finishedIsSporttery = computed(
+  () => result.value?.finishedSource === 'sporttery:fixedBonus',
+)
+const bannerTitle = computed(() => {
+  if (isLive.value) return ''
+  if (result.value?.finishedScanning) return '体彩官方赛果扫描中…'
+  if (finishedIsSporttery.value) return '竞彩当前停售（无在售赛事），已结束赛果为体彩官方真实数据'
+  if (result.value?.upstreamError) return `竞彩官方接口不可用：${result.value.upstreamError}`
+  if (result.value?._snapshot) return '当前为部署时抓取的静态快照（非实时）'
+  return '当前为离线示例数据，赔率非真实'
+})
+const bannerDesc = computed(() => {
+  if (isLive.value) return ''
+  if (result.value?.finishedScanning)
+    return '首次加载时正在后台扫描体彩官方已结束比赛（约 15-20 秒），期间临时显示第三方赛果，稍后会自动切换为体彩官方真实赛果与 5 玩法开奖。'
+  if (finishedIsSporttery.value)
+    return '当前为每日 11 点前的停售期，没有可投注的新赛事；但昨天及近期已结束比赛的赛果、5 玩法开奖均为体彩官方真实数据，可正常查看（含比分与历史赔率走势）。'
+  return '正在显示内置示例（队名真实、赔率为合成），与体彩 App 对不上是正常的。要看到与体彩 App 一致的真实数据，请运行本地实时后端（npm run server）且竞彩处于开售状态；静态预览版无后端，只能显示示例快照。'
+})
+
+// 自动翻页：用 IntersectionObserver 观察列表底部的哨兵元素。
+// 本布局中 el-main 才是真正的滚动容器（overflow:auto），window 不会触发
+// 滚动事件，因此不能用 window.scroll 监听。root:null 表示相对浏览器视口
+// 计算交叉，无论由 window 还是 el-main 滚动都能正确触发。
+const sentinel = ref<HTMLElement | null>(null)
+let io: IntersectionObserver | null = null
+
+function needsMore() {
+  return !loading.value && !noMore.value
+}
+
+function fillIfNeeded() {
+  if (!needsMore() || !sentinel.value) return
+  const rect = sentinel.value.getBoundingClientRect()
+  // 哨兵顶部已接近视口底部（240px 阈值）即视为到底
+  if (rect.top <= window.innerHeight + 240) loadMore()
 }
 
 onMounted(() => {
   loadInitial()
-  window.addEventListener('scroll', handleScroll, { passive: true })
+  if (sentinel.value && 'IntersectionObserver' in window) {
+    io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) fillIfNeeded()
+      },
+      { root: null, rootMargin: '240px 0px' },
+    )
+    io.observe(sentinel.value)
+  }
 })
-onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
+onBeforeUnmount(() => io?.disconnect())
 </script>
 
 <template>
   <div class="list-page">
+    <el-alert
+      v-if="result && !isLive"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="data-banner"
+      :title="bannerTitle"
+      :description="bannerDesc"
+    />
     <el-card shadow="never" class="filter-bar">
       <div class="filters">
         <span class="f-label">玩法：</span>
@@ -240,6 +297,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
         <span v-if="result" class="meta-info">
           共 {{ result.total }} 场 ·
           <el-tag v-if="result.source === 'live-sporttery'" type="success" size="small" effect="dark">实时 · 体彩官方</el-tag>
+          <el-tag v-else-if="result.finishedSource === 'sporttery:fixedBonus'" type="warning" size="small" effect="plain">赛果 · 体彩官方（停售期）</el-tag>
           <el-tag v-else type="warning" size="small" effect="plain">离线示例（非真实数据）</el-tag>
           <el-tag v-if="finishedTagText" type="info" size="small" effect="plain">{{ finishedTagText }}</el-tag>
           <el-tag v-else-if="result.finishedAvailable === false" type="warning" size="small" effect="plain">近两日赛果：未配置
@@ -247,8 +305,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
           <el-tag v-if="result._snapshot" type="info" size="small" effect="plain">静态快照 · {{ result.snapshotAt
             }}</el-tag>
         </span>
-        <el-tag v-if="result?.upstreamError" type="danger" size="small">
-          官方接口不可用：{{ result.upstreamError }}（已回退示例数据）
+        <el-tag v-if="result?.upstreamError" type="warning" size="small">
+          竞彩官方：{{ result.upstreamError }}（已回退示例数据）
         </el-tag>
         <el-tag v-if="errorMsg" type="danger" size="small">{{ errorMsg }}</el-tag>
       </div>
@@ -289,6 +347,9 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
         </div>
       </el-card>
     </div>
+
+    <!-- 列表底部哨兵：进入视口即触发自动加载下一页 -->
+    <div ref="sentinel" class="sentinel" aria-hidden="true"></div>
 
     <el-empty v-if="!loading && result && !result.total" description="暂无比赛数据" />
 
@@ -747,6 +808,14 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   margin: 18px 0 8px;
   text-align: center;
   min-height: 24px;
+}
+
+.data-banner {
+  margin-bottom: 16px;
+}
+
+.sentinel {
+  height: 1px;
 }
 
 .lm-state {

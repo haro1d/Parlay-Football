@@ -22,6 +22,8 @@ const UPSTREAM = 'https://webapi.sporttery.cn/gateway/jc/football/getMatchCalcul
 
 // Offline fallback: multi-league synthesized snapshot.
 const SAMPLE = buildSampleMatches()
+// 空 payload：官方在售接口停售/不可达时使用，仅展示已结束赛果，不混入合成示例赛事。
+const EMPTY = { value: { matchInfoList: [] } }
 void readFileSync // keep import for potential future sample.json use
 
 function send(res, status, body) {
@@ -75,6 +77,12 @@ async function fetchUpstream() {
     })
     if (!r.ok) throw new Error(`upstream HTTP ${r.status}`)
     const j = await r.json()
+    // 竞彩处于「停止销售」状态时，接口只返回 vtoolsConfig（含停售提示），
+    // 不含 matchInfoList —— 这是官方状态，并非接口故障。
+    const stop =
+      j?.value?.vtoolsConfig?.onLineStopMessage ||
+      j?.value?.vtoolsConfig?.offLineStopMessage
+    if (stop) throw new Error(stop)
     if (!j?.value?.matchInfoList?.length) throw new Error('空数据')
     return j
   } finally {
@@ -96,58 +104,65 @@ async function getMatches(opts) {
   let payload = SAMPLE
   let source = 'sample-snapshot'
   let upstreamError = null
+  let liveOdds = false
   // force=sample 可强制使用离线示例（用于排查 / 离线场景）
   if (opts.force !== 'sample') {
     try {
       payload = await getLivePayload()
       source = 'live-sporttery'
+      liveOdds = true
     } catch (e) {
       upstreamError = e.message
-      // 官方接口不可达（地域限制 / 离线 / 被拦截）→ 回退到内置示例
+      // 竞彩处于「停止销售」或官方接口不可达时，当前没有可投注的新赛事，
+      // 但已结束比赛的赛果（getFixedBonusV1）仍可正常查询，不应回退到合成示例。
+      payload = EMPTY
     }
   }
-  // 已结束比赛（赛果）数据源选择：
-  //  - live 模式：优先体彩官方 getFixedBonusV1 扫描（覆盖所有体彩开售联赛，含沙特联等
-  //    ESPN 不收录的联赛，且提供官方比分 + 5 玩法开奖 + 历史赔率）。首次扫描在后台异步
-  //    进行（约 15-20s），期间 fallback 到 ESPN 第三方赛果。
-  //  - sample / 离线模式：直接用 ESPN 第三方赛果。
+
+  // 已结束比赛（赛果）数据源 —— 始终尝试体彩官方，独立于在售接口：
+  //  - 锚点 maxId：在售接口成功时取其最大 matchId；停售时取持久化 store 的
+  //    lastScannedMaxId 并前向扫描新完赛场次（getSportteryFinished 内部处理）。
+  //  - 体彩扫描完成前（首次约 15-20s）临时用 ESPN 第三方赛果兜底，保证不空白。
   let finished = { matches: [], available: true, source: null, error: null }
   let sportteryScanning = false
-  if (source === 'live-sporttery') {
-    const maxMatchId = extractMaxMatchId(payload)
-    const sportteryFinished = await getSportteryFinished(maxMatchId)
-    if (sportteryFinished && sportteryFinished.length) {
-      finished = {
-        matches: sportteryFinished,
-        available: true,
-        source: 'sporttery:fixedBonus',
-        error: null,
-      }
-    } else if (sportteryFinished === null) {
-      // 后台首次扫描进行中，临时用 ESPN 兜底
-      sportteryScanning = true
-      try {
-        finished = await getFinishedMatches(3)
-      } catch {
-        /* ignore */
-      }
+  const anchorMaxId = liveOdds ? extractMaxMatchId(payload) : 0
+  const sportteryFinished = await getSportteryFinished(anchorMaxId)
+  if (sportteryFinished && sportteryFinished.length) {
+    finished = {
+      matches: sportteryFinished,
+      available: true,
+      source: 'sporttery:fixedBonus',
+      error: null,
     }
-    // sportteryFinished === [] （扫描完成但无数据）→ 保持空 finished
+  } else if (sportteryFinished === null) {
+    // 后台首次扫描进行中，临时用 ESPN 兜底
+    sportteryScanning = true
+    try {
+      finished = await getFinishedMatches(3)
+    } catch {
+      /* ignore */
+    }
   } else {
+    // sportteryFinished === [] （扫描完成但无数据）→ ESPN 兜底
     try {
       finished = await getFinishedMatches(3)
     } catch {
       /* ignore */
     }
   }
+
   const result = parseUpstream(payload, { ...opts, extraMatches: finished.matches })
-  result.source = source
+  result.source = liveOdds
+    ? 'live-sporttery'
+    : finished.source === 'sporttery:fixedBonus'
+      ? 'sporttery-finished'
+      : 'sample-snapshot'
   result.upstreamError = upstreamError
   result.finishedSource = finished.source
   result.finishedAvailable = finished.available
   if (finished.error) result.finishedError = finished.error
   if (sportteryScanning) result.finishedScanning = true
-  if (source === 'live-sporttery') result.updatedAt = new Date().toISOString()
+  if (liveOdds) result.updatedAt = new Date().toISOString()
   return result
 }
 

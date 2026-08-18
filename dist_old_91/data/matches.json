@@ -1,0 +1,1729 @@
+{
+  "updatedAt": "2026-08-10T02:52:35.159Z",
+  "matchCount": 38,
+  "total": 38,
+  "page": 1,
+  "pageSize": 38,
+  "leagues": [
+    {
+      "id": 0,
+      "code": "arg.1",
+      "abbName": "arg.1",
+      "allName": "arg.1"
+    },
+    {
+      "id": 0,
+      "code": "bra.1",
+      "abbName": "bra.1",
+      "allName": "bra.1"
+    },
+    {
+      "id": 0,
+      "code": "por.1",
+      "abbName": "por.1",
+      "allName": "por.1"
+    },
+    {
+      "id": 0,
+      "code": "bel.1",
+      "abbName": "bel.1",
+      "allName": "bel.1"
+    },
+    {
+      "id": 0,
+      "code": "sco.1",
+      "abbName": "sco.1",
+      "allName": "sco.1"
+    },
+    {
+      "id": 0,
+      "code": "ned.1",
+      "abbName": "ned.1",
+      "allName": "ned.1"
+    },
+    {
+      "id": 0,
+      "code": "chn.1",
+      "abbName": "chn.1",
+      "allName": "chn.1"
+    },
+    {
+      "id": 0,
+      "code": "ger.2",
+      "abbName": "ger.2",
+      "allName": "ger.2"
+    },
+    {
+      "id": 0,
+      "code": "jpn.1",
+      "abbName": "jpn.1",
+      "allName": "jpn.1"
+    },
+    {
+      "id": 58,
+      "code": "SAL",
+      "abbName": "瑞超",
+      "allName": "瑞典超级联赛"
+    },
+    {
+      "id": 55,
+      "code": "PFL",
+      "abbName": "葡超",
+      "allName": "葡萄牙超级联赛"
+    }
+  ],
+  "pools": [
+    "had",
+    "hhad"
+  ],
+  "source": "snapshot-real",
+  "finishedSource": "third-party:espn",
+  "finishedAvailable": true,
+  "_snapshot": true,
+  "snapshotAt": "2026/8/10 10:52:35",
+  "matches": [
+    {
+      "matchId": 401841485,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "23:15",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "arg.1",
+        "abbName": "arg.1",
+        "allName": "arg.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Argentinos Juniors",
+        "allName": "Argentinos Juniors"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Racing Club",
+        "allName": "Racing Club"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 3,
+      "awayId": 15,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841187,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "22:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Flamengo",
+        "allName": "Flamengo"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Vitória",
+        "allName": "Vitória"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-0",
+      "resultSource": "third-party:espn",
+      "homeId": 819,
+      "awayId": 3457,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841179,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "21:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Red Bull Bragantino",
+        "allName": "Red Bull Bragantino"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Corinthians",
+        "allName": "Corinthians"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-2",
+      "resultSource": "third-party:espn",
+      "homeId": 6079,
+      "awayId": 874,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841182,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "21:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Santos",
+        "allName": "Santos"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Athletico-PR",
+        "allName": "Athletico-PR"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-2",
+      "resultSource": "third-party:espn",
+      "homeId": 2674,
+      "awayId": 3458,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841481,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "20:45",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "arg.1",
+        "abbName": "arg.1",
+        "allName": "arg.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Defensa y Justicia",
+        "allName": "Defensa y Justicia"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Newell's Old Boys",
+        "allName": "Newell's Old Boys"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 8950,
+      "awayId": 14,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841479,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "20:45",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "arg.1",
+        "abbName": "arg.1",
+        "allName": "arg.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Gimnasia La Plata",
+        "allName": "Gimnasia La Plata"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Barracas Central",
+        "allName": "Barracas Central"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-0",
+      "resultSource": "third-party:espn",
+      "homeId": 9,
+      "awayId": 10060,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885485,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "19:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "por.1",
+        "abbName": "por.1",
+        "allName": "por.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Benfica",
+        "allName": "Benfica"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Académico de Viseu",
+        "allName": "Académico de Viseu"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-2",
+      "resultSource": "third-party:espn",
+      "homeId": 1929,
+      "awayId": 21607,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885490,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "19:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "por.1",
+        "abbName": "por.1",
+        "allName": "por.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Gil Vicente",
+        "allName": "Gil Vicente"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Rio Ave",
+        "allName": "Rio Ave"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-0",
+      "resultSource": "third-party:espn",
+      "homeId": 3699,
+      "awayId": 3822,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885488,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "19:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "por.1",
+        "abbName": "por.1",
+        "allName": "por.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Moreirense",
+        "allName": "Moreirense"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Braga",
+        "allName": "Braga"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-2",
+      "resultSource": "third-party:espn",
+      "homeId": 3696,
+      "awayId": 2994,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841186,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "19:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Bahia",
+        "allName": "Bahia"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Vasco da Gama",
+        "allName": "Vasco da Gama"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-0",
+      "resultSource": "third-party:espn",
+      "homeId": 9967,
+      "awayId": 3454,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841180,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "19:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Palmeiras",
+        "allName": "Palmeiras"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Internacional",
+        "allName": "Internacional"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-0",
+      "resultSource": "third-party:espn",
+      "homeId": 2029,
+      "awayId": 1936,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841490,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "18:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "arg.1",
+        "abbName": "arg.1",
+        "allName": "arg.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "San Lorenzo",
+        "allName": "San Lorenzo"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Huracán",
+        "allName": "Huracán"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-2",
+      "resultSource": "third-party:espn",
+      "homeId": 18,
+      "awayId": 10,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401879033,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "17:15",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bel.1",
+        "abbName": "bel.1",
+        "allName": "bel.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Antwerp",
+        "allName": "Antwerp"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Waasland-Beveren",
+        "allName": "Waasland-Beveren"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 17544,
+      "awayId": 13450,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885487,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "17:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "por.1",
+        "abbName": "por.1",
+        "allName": "por.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "FC Porto",
+        "allName": "FC Porto"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Alverca",
+        "allName": "Alverca"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-0",
+      "resultSource": "third-party:espn",
+      "homeId": 437,
+      "awayId": 21613,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401879034,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "16:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bel.1",
+        "abbName": "bel.1",
+        "allName": "bel.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Anderlecht",
+        "allName": "Anderlecht"
+      },
+      "away": {
+        "code": "",
+        "abbName": "RAAL La Louvière",
+        "allName": "RAAL La Louvière"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 441,
+      "awayId": 131235,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401878405,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "15:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "sco.1",
+        "abbName": "sco.1",
+        "allName": "sco.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Rangers",
+        "allName": "Rangers"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Hibernian",
+        "allName": "Hibernian"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-2",
+      "resultSource": "third-party:espn",
+      "homeId": 257,
+      "awayId": 258,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401875647,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:45",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ned.1",
+        "abbName": "ned.1",
+        "allName": "ned.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Heerenveen",
+        "allName": "Heerenveen"
+      },
+      "away": {
+        "code": "",
+        "abbName": "FC Twente",
+        "allName": "FC Twente"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-0",
+      "resultSource": "third-party:espn",
+      "homeId": 146,
+      "awayId": 152,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401841183,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bra.1",
+        "abbName": "bra.1",
+        "allName": "bra.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Cruzeiro",
+        "allName": "Cruzeiro"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Mirassol",
+        "allName": "Mirassol"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "3-1",
+      "resultSource": "third-party:espn",
+      "homeId": 2022,
+      "awayId": 9169,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401878409,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "sco.1",
+        "abbName": "sco.1",
+        "allName": "sco.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Heart of Midlothian",
+        "allName": "Heart of Midlothian"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Dundee United",
+        "allName": "Dundee United"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "4-0",
+      "resultSource": "third-party:espn",
+      "homeId": 262,
+      "awayId": 264,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401878408,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "sco.1",
+        "abbName": "sco.1",
+        "allName": "sco.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Motherwell",
+        "allName": "Motherwell"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Falkirk",
+        "allName": "Falkirk"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-0",
+      "resultSource": "third-party:espn",
+      "homeId": 266,
+      "awayId": 254,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401879040,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bel.1",
+        "abbName": "bel.1",
+        "allName": "bel.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Royal Charleroi SC",
+        "allName": "Royal Charleroi SC"
+      },
+      "away": {
+        "code": "",
+        "abbName": "OH Leuven",
+        "allName": "OH Leuven"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "3-1",
+      "resultSource": "third-party:espn",
+      "homeId": 3616,
+      "awayId": 5579,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401879035,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "14:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bel.1",
+        "abbName": "bel.1",
+        "allName": "bel.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Zulte-Waregem",
+        "allName": "Zulte-Waregem"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Racing Genk",
+        "allName": "Racing Genk"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 4691,
+      "awayId": 938,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401875649,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "12:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ned.1",
+        "abbName": "ned.1",
+        "allName": "ned.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "FC Groningen",
+        "allName": "FC Groningen"
+      },
+      "away": {
+        "code": "",
+        "abbName": "FC Utrecht",
+        "allName": "FC Utrecht"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 145,
+      "awayId": 153,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401875648,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "12:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ned.1",
+        "abbName": "ned.1",
+        "allName": "ned.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "PEC Zwolle",
+        "allName": "PEC Zwolle"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Ajax Amsterdam",
+        "allName": "Ajax Amsterdam"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-2",
+      "resultSource": "third-party:espn",
+      "homeId": 2565,
+      "awayId": 139,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401878406,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "12:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "sco.1",
+        "abbName": "sco.1",
+        "allName": "sco.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Kilmarnock",
+        "allName": "Kilmarnock"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Celtic",
+        "allName": "Celtic"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-5",
+      "resultSource": "third-party:espn",
+      "homeId": 260,
+      "awayId": 256,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401861446,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "12:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "chn.1",
+        "abbName": "chn.1",
+        "allName": "chn.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Shandong Taishan",
+        "allName": "Shandong Taishan"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Tianjin Jinmen Tiger",
+        "allName": "Tianjin Jinmen Tiger"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 7521,
+      "awayId": 8239,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401861499,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:35",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "chn.1",
+        "abbName": "chn.1",
+        "allName": "chn.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Chongqing Tonglianglong",
+        "allName": "Chongqing Tonglianglong"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Shanghai Port",
+        "allName": "Shanghai Port"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-3",
+      "resultSource": "third-party:espn",
+      "homeId": 131704,
+      "awayId": 15515,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401879036,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "bel.1",
+        "abbName": "bel.1",
+        "allName": "bel.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "KAA Gent",
+        "allName": "KAA Gent"
+      },
+      "away": {
+        "code": "",
+        "abbName": "KV Mechelen",
+        "allName": "KV Mechelen"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-0",
+      "resultSource": "third-party:espn",
+      "homeId": 3611,
+      "awayId": 7879,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885150,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ger.2",
+        "abbName": "ger.2",
+        "allName": "ger.2"
+      },
+      "home": {
+        "code": "",
+        "abbName": "1. FC Nürnberg",
+        "allName": "1. FC Nürnberg"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Dynamo Dresden",
+        "allName": "Dynamo Dresden"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "3-0",
+      "resultSource": "third-party:espn",
+      "homeId": 269,
+      "awayId": 7017,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885147,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ger.2",
+        "abbName": "ger.2",
+        "allName": "ger.2"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Energie Cottbus",
+        "allName": "Energie Cottbus"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Hannover 96",
+        "allName": "Hannover 96"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "3-1",
+      "resultSource": "third-party:espn",
+      "homeId": 123,
+      "awayId": 2428,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401885153,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:30",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ger.2",
+        "abbName": "ger.2",
+        "allName": "ger.2"
+      },
+      "home": {
+        "code": "",
+        "abbName": "St. Pauli",
+        "allName": "St. Pauli"
+      },
+      "away": {
+        "code": "",
+        "abbName": "SpVgg Greuther Fürth",
+        "allName": "SpVgg Greuther Fürth"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-1",
+      "resultSource": "third-party:espn",
+      "homeId": 270,
+      "awayId": 3070,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401861445,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "11:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "chn.1",
+        "abbName": "chn.1",
+        "allName": "chn.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Henan",
+        "allName": "Henan"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Qingdao West Coast",
+        "allName": "Qingdao West Coast"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-0",
+      "resultSource": "third-party:espn",
+      "homeId": 8240,
+      "awayId": 22198,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401875650,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "10:15",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "ned.1",
+        "abbName": "ned.1",
+        "allName": "ned.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Sparta Rotterdam",
+        "allName": "Sparta Rotterdam"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Feyenoord Rotterdam",
+        "allName": "Feyenoord Rotterdam"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "0-1",
+      "resultSource": "third-party:espn",
+      "homeId": 151,
+      "awayId": 142,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401877173,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "10:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "jpn.1",
+        "abbName": "jpn.1",
+        "allName": "jpn.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "V-Varen Nagasaki",
+        "allName": "V-Varen Nagasaki"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Kyoto Sanga",
+        "allName": "Kyoto Sanga"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "2-1",
+      "resultSource": "third-party:espn",
+      "homeId": 19001,
+      "awayId": 21361,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 401877179,
+      "matchNum": 0,
+      "matchNumStr": "",
+      "matchNumDate": "2026-08-09",
+      "businessDate": "2026-08-09",
+      "matchDate": "2026-08-09",
+      "matchTime": "09:00",
+      "weekday": "",
+      "league": {
+        "id": 0,
+        "code": "jpn.1",
+        "abbName": "jpn.1",
+        "allName": "jpn.1"
+      },
+      "home": {
+        "code": "",
+        "abbName": "Tokyo Verdy 1969",
+        "allName": "Tokyo Verdy 1969"
+      },
+      "away": {
+        "code": "",
+        "abbName": "Kawasaki Frontale",
+        "allName": "Kawasaki Frontale"
+      },
+      "status": "FT",
+      "statusLabel": "已完成",
+      "sellStatus": "finished",
+      "finished": true,
+      "finalScore": "1-1",
+      "resultSource": "third-party:espn",
+      "homeId": 3393,
+      "awayId": 7112,
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {}
+    },
+    {
+      "matchId": 2040794,
+      "matchNum": 1001,
+      "matchNumStr": "周一001",
+      "matchNumDate": "260810",
+      "businessDate": "2026-08-10",
+      "matchDate": "2026-08-11",
+      "matchTime": "01:00:00",
+      "weekday": "周一",
+      "league": {
+        "id": 58,
+        "code": "SAL",
+        "abbName": "瑞超",
+        "allName": "瑞典超级联赛"
+      },
+      "home": {
+        "code": "SUS",
+        "abbName": "天狼星",
+        "allName": "天狼星",
+        "rank": "[瑞超1]"
+      },
+      "away": {
+        "code": "BPK",
+        "abbName": "布鲁马波",
+        "allName": "布鲁马波卡纳",
+        "rank": "[瑞超13]"
+      },
+      "status": "Selling",
+      "statusLabel": "已开售",
+      "sellStatus": "2",
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {
+        "had": {
+          "pool": "had",
+          "poolNameZh": "胜平负",
+          "updateTime": "21:47:44",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 1.25,
+              "trend": "flat",
+              "impliedProb": 0.8,
+              "noVigProb": 0.708964,
+              "fairOdds": 1.4105
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 5.25,
+              "trend": "flat",
+              "impliedProb": 0.190476,
+              "noVigProb": 0.168801,
+              "fairOdds": 5.9241
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 7.25,
+              "trend": "flat",
+              "impliedProb": 0.137931,
+              "noVigProb": 0.122235,
+              "fairOdds": 8.181
+            }
+          ],
+          "overround": 1.128407,
+          "returnRate": 0.886205,
+          "margin": 0.113795
+        },
+        "hhad": {
+          "pool": "hhad",
+          "poolNameZh": "让球胜平负",
+          "updateTime": "21:48:14",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 1.8,
+              "trend": "flat",
+              "impliedProb": 0.555556,
+              "noVigProb": 0.491892,
+              "fairOdds": 2.033
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 3.9,
+              "trend": "flat",
+              "impliedProb": 0.25641,
+              "noVigProb": 0.227027,
+              "fairOdds": 4.4048
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 3.15,
+              "trend": "flat",
+              "impliedProb": 0.31746,
+              "noVigProb": 0.281081,
+              "fairOdds": 3.5577
+            }
+          ],
+          "goalLine": -1,
+          "overround": 1.129426,
+          "returnRate": 0.885405,
+          "margin": 0.114595
+        }
+      }
+    },
+    {
+      "matchId": 2040795,
+      "matchNum": 1002,
+      "matchNumStr": "周一002",
+      "matchNumDate": "260810",
+      "businessDate": "2026-08-10",
+      "matchDate": "2026-08-11",
+      "matchTime": "01:00:00",
+      "weekday": "周一",
+      "league": {
+        "id": 58,
+        "code": "SAL",
+        "abbName": "瑞超",
+        "allName": "瑞典超级联赛"
+      },
+      "home": {
+        "code": "VSR",
+        "abbName": "韦斯特罗",
+        "allName": "韦斯特罗斯",
+        "rank": "[瑞超9]"
+      },
+      "away": {
+        "code": "DJU",
+        "abbName": "佐加顿斯",
+        "allName": "佐加顿斯",
+        "rank": "[瑞超3]"
+      },
+      "status": "Selling",
+      "statusLabel": "已开售",
+      "sellStatus": "2",
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {
+        "had": {
+          "pool": "had",
+          "poolNameZh": "胜平负",
+          "updateTime": "09:34:15",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 3.85,
+              "trend": "flat",
+              "impliedProb": 0.25974,
+              "noVigProb": 0.230014,
+              "fairOdds": 4.3476
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 3.85,
+              "trend": "flat",
+              "impliedProb": 0.25974,
+              "noVigProb": 0.230014,
+              "fairOdds": 4.3476
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 1.64,
+              "trend": "flat",
+              "impliedProb": 0.609756,
+              "noVigProb": 0.539972,
+              "fairOdds": 1.8519
+            }
+          ],
+          "overround": 1.129237,
+          "returnRate": 0.885554,
+          "margin": 0.114446
+        },
+        "hhad": {
+          "pool": "hhad",
+          "poolNameZh": "让球胜平负",
+          "updateTime": "09:34:14",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 1.95,
+              "trend": "flat",
+              "impliedProb": 0.512821,
+              "noVigProb": 0.454121,
+              "fairOdds": 2.2021
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 3.65,
+              "trend": "flat",
+              "impliedProb": 0.273973,
+              "noVigProb": 0.242613,
+              "fairOdds": 4.1218
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 2.92,
+              "trend": "flat",
+              "impliedProb": 0.342466,
+              "noVigProb": 0.303266,
+              "fairOdds": 3.2974
+            }
+          ],
+          "goalLine": 1,
+          "overround": 1.129259,
+          "returnRate": 0.885537,
+          "margin": 0.114463
+        }
+      }
+    },
+    {
+      "matchId": 2040796,
+      "matchNum": 1003,
+      "matchNumStr": "周一003",
+      "matchNumDate": "260810",
+      "businessDate": "2026-08-10",
+      "matchDate": "2026-08-11",
+      "matchTime": "03:15:00",
+      "weekday": "周一",
+      "league": {
+        "id": 55,
+        "code": "PFL",
+        "abbName": "葡超",
+        "allName": "葡萄牙超级联赛"
+      },
+      "home": {
+        "code": "STC",
+        "abbName": "圣克拉拉",
+        "allName": "圣克拉拉",
+        "rank": "[葡超14]"
+      },
+      "away": {
+        "code": "NAI",
+        "abbName": "葡国民",
+        "allName": "葡萄牙国民",
+        "rank": "[葡超13]"
+      },
+      "status": "Selling",
+      "statusLabel": "已开售",
+      "sellStatus": "2",
+      "bettingSingle": false,
+      "bettingAllUp": false,
+      "markets": {
+        "had": {
+          "pool": "had",
+          "poolNameZh": "胜平负",
+          "updateTime": "09:34:15",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 1.73,
+              "trend": "flat",
+              "impliedProb": 0.578035,
+              "noVigProb": 0.512418,
+              "fairOdds": 1.9515
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 3.15,
+              "trend": "flat",
+              "impliedProb": 0.31746,
+              "noVigProb": 0.281423,
+              "fairOdds": 3.5534
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 4.3,
+              "trend": "flat",
+              "impliedProb": 0.232558,
+              "noVigProb": 0.206159,
+              "fairOdds": 4.8506
+            }
+          ],
+          "overround": 1.128053,
+          "returnRate": 0.886483,
+          "margin": 0.113517
+        },
+        "hhad": {
+          "pool": "hhad",
+          "poolNameZh": "让球胜平负",
+          "updateTime": "09:34:14",
+          "outcomes": [
+            {
+              "code": "h",
+              "key": "home",
+              "labelZh": "主胜",
+              "odds": 3.55,
+              "trend": "flat",
+              "impliedProb": 0.28169,
+              "noVigProb": 0.2493,
+              "fairOdds": 4.0112
+            },
+            {
+              "code": "d",
+              "key": "draw",
+              "labelZh": "平",
+              "odds": 3.25,
+              "trend": "flat",
+              "impliedProb": 0.307692,
+              "noVigProb": 0.272313,
+              "fairOdds": 3.6722
+            },
+            {
+              "code": "a",
+              "key": "away",
+              "labelZh": "主负",
+              "odds": 1.85,
+              "trend": "flat",
+              "impliedProb": 0.540541,
+              "noVigProb": 0.478387,
+              "fairOdds": 2.0904
+            }
+          ],
+          "goalLine": -1,
+          "overround": 1.129923,
+          "returnRate": 0.885016,
+          "margin": 0.114984
+        }
+      }
+    }
+  ]
+}

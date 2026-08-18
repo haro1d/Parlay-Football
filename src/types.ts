@@ -109,6 +109,7 @@ export interface MatchListResult {
   upstreamError?: string | null
   finishedSource?: string | null
   finishedAvailable?: boolean
+  finishedScanning?: boolean
   finishedError?: string | null
   // 静态部署回退：标记当前数据来自部署时抓取的真实快照
   _snapshot?: boolean
