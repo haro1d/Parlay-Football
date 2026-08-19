@@ -19,6 +19,8 @@ const HEADERS = {
 };
 const BASE = 'https://webapi.sporttery.cn/gateway/uniform/football';
 
+import { cleanName } from './clean.js';
+
 function str(v) {
   return v === null || v === undefined ? '' : String(v);
 }
@@ -360,8 +362,8 @@ function fetchEspnTeamSchedule(teamId, lg, limit = 50) {
       out.push({
         id: e.id,
         date: d.toISOString().slice(0, 10),
-        homeName: (h.team && (h.team.displayName || h.team.shortDisplayName)) || "",
-        awayName: (a.team && (a.team.displayName || a.team.shortDisplayName)) || "",
+        homeName: cleanName(h.team && (h.team.displayName || h.team.shortDisplayName)) || "",
+        awayName: cleanName(a.team && (a.team.displayName || a.team.shortDisplayName)) || "",
         homeScore,
         awayScore,
         homeWin: !!(h.score && h.score.winner),

@@ -13,6 +13,7 @@ import { calcParlay, listParlayTypes, PARLAY_TABLE } from './lib/parlay.js'
 import { POOL_NAME_ZH, POOL_MAX_ALLUP } from './lib/labels.js'
 import { buildSampleMatches } from './lib/sampleData.js'
 import { teamInsight } from './lib/insight.js'
+import { aiAnalyze } from './lib/aiAnalyze.js'
 import { getFinishedMatches } from './lib/results.js'
 import { getSportteryFinished } from './lib/sportteryResults.js'
 
@@ -260,6 +261,38 @@ const server = http.createServer(async (req, res) => {
       const data = await getMatches({ matchId: Number(m[1]) })
       if (!data.matches.length) return send(res, 404, { success: false, error: 'match not found' })
       return send(res, 200, { success: true, data: data.matches[0] })
+    }
+
+    // POST /api/ai-analysis  —— 赛前 AI 分析（免费大模型，用户自带 Key）
+    if (p === '/api/ai-analysis' && req.method === 'POST') {
+      const body = await readBody(req)
+      // 取该场 HAD 赔率隐含概率作为分析主信号（赔率是最强预测器）
+      if (body.matchId && !body.hadProbs) {
+        try {
+          const dm = await getMatches({ matchId: Number(body.matchId) })
+          const m = dm.matches && dm.matches[0]
+          const had = m && m.markets && m.markets.had
+          if (had && had.outcomes) {
+            const hp = {}
+            for (const o of had.outcomes) {
+              const prob = o.noVigProb != null ? o.noVigProb : o.impliedProb
+              if (o.code === 'h') hp.home = prob
+              else if (o.code === 'd') hp.draw = prob
+              else if (o.code === 'a') hp.away = prob
+            }
+            if (hp.home != null && hp.draw != null && hp.away != null) body.hadProbs = hp
+          }
+        } catch {}
+      }
+      const result = await aiAnalyze(body)
+      // 错误也返回 200 + success:false，让前端拿到真实错误原因（不要返回 HTTP 502）
+      return send(
+        res,
+        200,
+        result.success
+          ? { success: true, data: { analysis: result.analysis, model: result.model, source: result.source, dataBacked: result.dataBacked } }
+          : { success: false, error: result.error },
+      )
     }
 
     // POST /api/derive

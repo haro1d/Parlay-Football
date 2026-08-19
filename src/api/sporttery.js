@@ -41,7 +41,29 @@ export async function fetchTeamInsight(matchId, home, away, opts = {}) {
 }
 
 export async function fetchMatch(id) {
-  const res = await http.get(`/match/${id}`)
+  try {
+    const res = await http.get(`/match/${id}`)
+    return unwrap(res)
+  } catch (e) {
+    // 静态托管（如 CloudStudio）无后端时，回退到部署时抓取的真实快照
+    if (typeof window !== 'undefined') {
+      try {
+        const r = await fetch('/data/matches.json', { cache: 'no-store' })
+        if (r.ok) {
+          const j = await r.json()
+          const ms = j.matches || j.data?.matches || []
+          const m = ms.find((x) => String(x.matchId) === String(id))
+          if (m) return m
+        }
+      } catch {}
+    }
+    throw e
+  }
+}
+
+// 赛前 AI 分析（免费大模型，用户自选供应商 + 自带 API Key）
+export async function fetchAiAnalysis(payload) {
+  const res = await http.post('/ai-analysis', payload)
   return unwrap(res)
 }
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
-import { fetchMatches, fetchTeamInsight } from '@/api/sporttery'
+import { fetchMatches, fetchTeamInsight, fetchAiAnalysis } from '@/api/sporttery'
 import type { MatchListResult, PoolCode, Match, TeamInsight, MatchResult, RealInsight, DemoInsight } from '@/types'
 import OddsTable from '@/components/OddsTable.vue'
 import MatchResultGrid from '@/components/MatchResultGrid.vue'
+import { MagicStick } from '@element-plus/icons-vue'
 import { zhTeam, zhLeagueName } from '@/translate'
 
 const loading = ref(false)
@@ -110,6 +111,103 @@ async function selectMatch(m: Match) {
     insight.value = null
   } finally {
     insightLoading.value = false
+  }
+}
+
+// ---- 赛前 AI 分析（抽屉入口，仅未开赛对局显示）----
+function isUpcoming(m: Match | null): boolean {
+  if (!m) return false
+  if (m.finished) return false
+  if (m.status === 'FT') return false
+  if (m.statusLabel === '已完成') return false
+  return true
+}
+
+const PROVIDER_OPTIONS = [
+  { value: 'deepseek', label: 'DeepSeek', baseURL: 'https://api.deepseek.com/v1', model: 'deepseek-chat', doc: 'https://platform.deepseek.com/', free: '注册即送 500 万 tokens 免费额度，用完按量计费（很便宜）' },
+  { value: 'doubao', label: '豆包（火山方舟）', baseURL: 'https://ark.cn-beijing.volces.com/api/v3', model: '', doc: 'https://www.volcengine.com/product/ark', free: '需实名；在控制台创建「推理接入点」，把 Endpoint ID（如 ep-2024xxxx）填到下方"模型名称"。新用户有免费额度' },
+  { value: 'openrouter', label: 'OpenRouter（免费模型多）', baseURL: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-r1-distill-llama-70b:free', doc: 'https://openrouter.ai/', free: '注册即用，带 :free 后缀的模型完全免费' },
+  { value: 'siliconflow', label: '硅基流动', baseURL: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3', doc: 'https://siliconflow.cn/', free: '注册送 14 元额度 + 多个开源免费模型' },
+  { value: 'custom', label: '自定义', baseURL: '', model: '', doc: '', free: '任意 OpenAI 兼容网关，自行填地址与模型' },
+]
+
+const LS_KEY = 'ai_analysis_settings'
+const aiDialog = ref(false)
+const aiProvider = ref('deepseek')
+const aiApiKey = ref('')
+const aiBaseURL = ref('')
+const aiModel = ref('')
+const aiLoading = ref(false)
+const aiResult = ref('')
+const aiError = ref('')
+const aiModelUsed = ref('')
+const aiDataBacked = ref(false)
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY) || '{}')
+    if (s.provider) aiProvider.value = s.provider
+    if (s.apiKey) aiApiKey.value = s.apiKey
+    if (s.baseURL) aiBaseURL.value = s.baseURL
+    if (s.model) aiModel.value = s.model
+  } catch {}
+  applyProviderPreset(aiProvider.value)
+}
+function saveSettings() {
+  localStorage.setItem(
+    LS_KEY,
+    JSON.stringify({
+      provider: aiProvider.value,
+      apiKey: aiApiKey.value,
+      baseURL: aiBaseURL.value,
+      model: aiModel.value,
+    }),
+  )
+}
+function applyProviderPreset(value: string) {
+  const opt = PROVIDER_OPTIONS.find((o) => o.value === value)
+  if (opt && opt.value !== 'custom') {
+    aiBaseURL.value = opt.baseURL
+    aiModel.value = opt.model
+  }
+}
+function onProviderChange(value: string) {
+  applyProviderPreset(value)
+  saveSettings()
+}
+function openAi() {
+  aiResult.value = ''
+  aiError.value = ''
+  loadSettings()
+  aiDialog.value = true
+}
+async function runAi() {
+  if (!selected.value) return
+  aiLoading.value = true
+  aiError.value = ''
+  aiResult.value = ''
+  try {
+    const data = await fetchAiAnalysis({
+      provider: aiProvider.value,
+      apiKey: aiApiKey.value,
+      baseURL: aiBaseURL.value,
+      model: aiModel.value,
+      matchId: selected.value.matchId,
+      homeName: selected.value.home.abbName,
+      awayName: selected.value.away.abbName,
+      source: selected.value.resultSource || undefined,
+      homeId: selected.value.homeId,
+      awayId: selected.value.awayId,
+      league: selected.value.league?.code,
+    })
+    aiResult.value = data.analysis
+    aiModelUsed.value = data.model
+    aiDataBacked.value = !!data.dataBacked
+    if (aiApiKey.value) saveSettings()
+  } catch (e: any) {
+    aiError.value = e.message || '分析失败'
+  } finally {
+    aiLoading.value = false
   }
 }
 
@@ -324,13 +422,13 @@ onBeforeUnmount(() => io?.disconnect())
         <div class="teams">
           <div class="team">
             <span class="t-name">{{ zhTeam(m.home.abbName) }}</span>
-            <span v-if="m.home.rank" class="t-rank">[{{ m.home.rank }}]</span>
+            <span v-if="m.home.rank" class="t-rank">{{ m.home.rank }}</span>
           </div>
           <span v-if="m.finished" class="score-final">{{ m.finalScore }}</span>
           <span v-else class="vs">VS</span>
           <div class="team">
             <span class="t-name">{{ zhTeam(m.away.abbName) }}</span>
-            <span v-if="m.away.rank" class="t-rank">[{{ m.away.rank }}]</span>
+            <span v-if="m.away.rank" class="t-rank">{{ m.away.rank }}</span>
           </div>
         </div>
         <div class="tags">
@@ -369,6 +467,16 @@ onBeforeUnmount(() => io?.disconnect())
             <el-tag v-else-if="insight?.source === 'espn'" size="small" type="success" effect="dark">真实数据 ·
               ESPN</el-tag>
             <el-tag v-else size="small" type="success" effect="dark">真实数据 · 体彩官方</el-tag>
+            <el-button
+              v-if="isUpcoming(selected)"
+              type="primary"
+              size="small"
+              :loading="aiLoading"
+              class="ai-entry"
+              @click="openAi"
+            >
+              <el-icon style="margin-right: 4px"><MagicStick /></el-icon> AI 分析
+            </el-button>
           </div>
           <el-alert v-if="insight?.demo" type="warning" :closable="false" show-icon class="demo-alert"
             title="近期战绩与历史交锋为合成演示数据"
@@ -376,12 +484,12 @@ onBeforeUnmount(() => io?.disconnect())
           <div class="scoreline">
             <div class="side-t">
               <span class="name">{{ zhTeam(selected.home.abbName) }}</span>
-              <span v-if="selected.home.rank" class="rank">[{{ selected.home.rank }}]</span>
+              <span v-if="selected.home.rank" class="rank">{{ selected.home.rank }}</span>
             </div>
             <span class="vs">VS</span>
             <div class="side-t">
               <span class="name">{{ zhTeam(selected.away.abbName) }}</span>
-              <span v-if="selected.away.rank" class="rank">[{{ selected.away.rank }}]</span>
+              <span v-if="selected.away.rank" class="rank">{{ selected.away.rank }}</span>
             </div>
           </div>
           <div class="when">
@@ -626,6 +734,75 @@ onBeforeUnmount(() => io?.disconnect())
               description="当前为静态预览部署，未运行 Node 后端，无法拉取实时战绩与交锋。本地或 Render 部署可查看完整实时数据。" />
           </template>
         </div>
+        <!-- AI 赛前分析对话框 -->
+        <el-dialog v-model="aiDialog" title="AI 赛前分析" width="760px" top="6vh" destroy-on-close>
+          <div v-if="selected" class="ai-match">
+            <span class="ai-league">{{ zhLeagueName(selected.league) }}</span>
+            <span class="ai-teams">{{ zhTeam(selected.home.abbName) }} VS {{ zhTeam(selected.away.abbName) }}</span>
+          </div>
+          <el-alert
+            v-if="!aiApiKey"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="ai-tip"
+            title="未填写 Key：将使用「免 Key 规则速算」"
+            description="基于两队真实近期战绩与交锋给出统计预测，无需申请任何大模型 Key。想用 AI 大模型分析，请在下方填入 Key。"
+          />
+          <el-form label-width="92px" class="ai-form">
+            <el-form-item label="模型供应商">
+              <el-select v-model="aiProvider" @change="onProviderChange" style="width: 100%">
+                <el-option v-for="o in PROVIDER_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item v-if="PROVIDER_OPTIONS.find((o) => o.value === aiProvider)?.doc" label="申请地址">
+              <a :href="PROVIDER_OPTIONS.find((o) => o.value === aiProvider)!.doc" target="_blank" rel="noopener" class="ai-doc-link">
+                {{ PROVIDER_OPTIONS.find((o) => o.value === aiProvider)!.doc }}
+              </a>
+              <div class="ai-key-hint">{{ PROVIDER_OPTIONS.find((o) => o.value === aiProvider)!.free }}</div>
+            </el-form-item>
+
+            <el-form-item label="API Key">
+              <el-input
+                v-model="aiApiKey"
+                type="password"
+                show-password
+                placeholder="粘贴你在该厂商申请的免费 API Key（留空=免 Key 规则速算）"
+                @input="saveSettings"
+              />
+              <div class="ai-key-hint">不填也能用：留空即走「免 Key 规则速算」；填了 Key 则由 AI 大模型给出更详细的伤停/战意分析。</div>
+            </el-form-item>
+
+            <template v-if="aiProvider === 'custom' || aiProvider === 'doubao'">
+              <el-form-item v-if="aiProvider === 'custom'" label="接口地址">
+                <el-input v-model="aiBaseURL" placeholder="OpenAI 兼容 /chat/completions 网关地址" @input="saveSettings" />
+              </el-form-item>
+              <el-form-item label="模型名称">
+                <el-input
+                  v-model="aiModel"
+                  :placeholder="aiProvider === 'doubao' ? '填火山方舟 Endpoint ID，如 ep-2024xxxxxx' : '如 deepseek-chat'"
+                  @input="saveSettings"
+                />
+              </el-form-item>
+            </template>
+          </el-form>
+          <el-button type="primary" :loading="aiLoading" @click="runAi" style="width: 100%">
+            {{ aiLoading ? '分析中…' : (aiApiKey ? '开始 AI 分析' : '免 Key 规则速算') }}
+          </el-button>
+          <el-alert v-if="aiError" type="error" :closable="false" show-icon :title="aiError" class="ai-error" />
+          <div v-if="aiResult" class="ai-result">
+            <div class="ai-result-head">
+              <span>分析结果</span>
+              <span class="ai-result-meta">
+                模型：{{ aiModelUsed }}
+                <el-divider direction="vertical" />
+                {{ aiDataBacked ? '基于真实战绩/交锋' : '基于模型自身知识' }}
+              </span>
+            </div>
+            <div class="ai-result-body">{{ aiResult }}</div>
+          </div>
+        </el-dialog>
       </template>
     </el-drawer>
   </div>
@@ -841,6 +1018,71 @@ onBeforeUnmount(() => io?.disconnect())
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+}
+
+.ai-entry {
+  margin-left: auto;
+}
+
+.ai-match {
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.ai-league {
+  color: #6b7280;
+  font-size: 13px;
+  margin-right: 8px;
+}
+.ai-teams {
+  font-weight: 700;
+}
+.ai-tip {
+  margin-bottom: 16px;
+}
+.ai-form {
+  margin-bottom: 8px;
+}
+.ai-key-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+}
+.ai-doc-link {
+  color: #2563eb;
+  font-size: 13px;
+  word-break: break-all;
+}
+.ai-error {
+  margin-top: 12px;
+}
+.ai-result {
+  margin-top: 16px;
+  border: 1px solid var(--el-border-color, #ebeef5);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ai-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--el-fill-color-light, #f5f7fa);
+  font-weight: 600;
+  font-size: 14px;
+}
+.ai-result-meta {
+  font-weight: 400;
+  font-size: 12px;
+  color: #909399;
+}
+.ai-result-body {
+  padding: 14px;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 14px;
+  max-height: 50vh;
+  overflow: auto;
 }
 
 .drawer .scoreline {

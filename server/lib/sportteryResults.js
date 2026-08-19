@@ -238,11 +238,15 @@ export async function getSportteryFinished(currentMaxId) {
       try {
         const store = loadStore()
         if (currentMaxId && currentMaxId > 0) {
-          // 在售接口可用：增量向前扫新完赛场次，并补扫当前锚点下方（同一期里 ID 偏低的场次）。
+          // 在售接口可用：向前扫新完赛场次。
+          // 注意上界必须超出 currentMaxId 一段缓冲：刚完赛的场次会立即掉出在售列表，
+          // 但其 matchId 往往高于「当前在售最大 ID」（例如萨迪纳摩 2040950 > 在售最大 2040947），
+          // 若只扫到 currentMaxId 就会漏掉它们。靠 GAP_STOP（连续 30 个空 ID）提前结束，避免无效请求。
           const fFrom = store.lastScannedMaxId
             ? store.lastScannedMaxId + 1
             : Math.max(1, currentMaxId - LIVE_SCAN_SPAN)
-          if (fFrom <= currentMaxId) await scanRange(fFrom, currentMaxId, store, 'forward')
+          const fTo = currentMaxId + FORWARD_SPAN
+          if (fFrom <= fTo) await scanRange(fFrom, fTo, store, 'forward')
           const bFrom = store.lastScannedMaxId ? store.lastScannedMaxId - 1 : currentMaxId - 1
           const bTo = store.lastScannedMinId
             ? store.lastScannedMinId - 1

@@ -2,6 +2,7 @@
 
 import { deriveMarket, round, toOdds } from "./derive.js";
 import { POOL_NAME_ZH, decodeOutcome, orderedOutcomeCodes, toTrend } from "./labels.js";
+import { cleanName } from "./clean.js";
 
 export const ALL_POOLS = ["had", "hhad", "crs", "ttg", "hafu"];
 
@@ -100,20 +101,20 @@ export function parseUpstream(payload, opts = {}) {
         league: {
           id: Number(sm.leagueId) || 0,
           code: str(sm.leagueCode),
-          abbName: str(sm.leagueAbbName),
-          allName: str(sm.leagueAllName),
+          abbName: cleanName(sm.leagueAbbName),
+          allName: cleanName(sm.leagueAllName),
         },
         home: {
           code: str(sm.homeTeamCode),
-          abbName: str(sm.homeTeamAbbName),
-          allName: str(sm.homeTeamAllName),
-          rank: str(sm.homeRank) || undefined,
+          abbName: cleanName(sm.homeTeamAbbName),
+          allName: cleanName(sm.homeTeamAllName),
+          rank: cleanName(sm.homeRank) || undefined,
         },
         away: {
           code: str(sm.awayTeamCode),
-          abbName: str(sm.awayTeamAbbName),
-          allName: str(sm.awayTeamAllName),
-          rank: str(sm.awayRank) || undefined,
+          abbName: cleanName(sm.awayTeamAbbName),
+          allName: cleanName(sm.awayTeamAllName),
+          rank: cleanName(sm.awayRank) || undefined,
         },
         status: str(sm.matchStatus),
         statusLabel: str(sm.matchStatus) === "Selling" ? "已开售" : "已完成",

@@ -24,6 +24,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8787',
         changeOrigin: true,
+        // AI 分析可能调用慢速大模型（30-120s），代理必须等够久，否则会提前返回 502
+        timeout: 180000,
       },
     },
   },

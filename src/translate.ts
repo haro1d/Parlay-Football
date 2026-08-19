@@ -17,6 +17,14 @@ function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, '') // 去掉葡/西/法等语言的重音符号
 }
 
+// 前端兜底清洗：剔除厂商在队名 / 联赛名后追加的阶段标记，如「波特诺[[解放者杯1]]」。
+// 后端解析层已清洗一次，这里再兜一道，确保任意来源展示都干净。
+const BRACKET_RE = /\[\[[^\]]*\]\]|\[[^\]]*\]|【[^】]*】|〔[^〕]*〕/g
+function cleanName(name?: string | null): string {
+  if (!name) return ''
+  return name.replace(BRACKET_RE, '').replace(/\s+/g, ' ').trim()
+}
+
 // 联赛代码 -> 中文名
 export const LEAGUE_ZH: Record<string, string> = {
   'eng.1': '英超',
@@ -612,7 +620,8 @@ for (const [k, v] of Object.entries(TEAM_ZH)) {
 /** 把原始外文队名翻译成中文；未收录则回退原名。 */
 export function zhTeam(name?: string | null): string {
   if (!name) return ''
-  return teamMap.get(normalize(name)) || name
+  const cleaned = cleanName(name)
+  return teamMap.get(normalize(cleaned)) || cleaned
 }
 
 /** 联赛对象 -> 中文联赛名（按 code 映射，回退到原名）。 */
@@ -622,5 +631,5 @@ export function zhLeagueName(lg?: { code?: string; abbName?: string; allName?: s
     const z = LEAGUE_ZH[lg.code]
     if (z) return z
   }
-  return lg.abbName || lg.allName || ''
+  return cleanName(lg.abbName || lg.allName) || ''
 }
