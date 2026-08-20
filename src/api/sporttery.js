@@ -16,12 +16,16 @@ export async function fetchMatches(params = {}) {
     const res = await http.get('/matches', { params })
     return unwrap(res)
   } catch (e) {
-    // 静态托管（如 CloudStudio）无后端时，回退到部署时抓取的真实快照
-    if (typeof window !== 'undefined') {
+    // 仅静态托管（如 CloudStudio）无后端时回退到快照；
+    // 本地开发(dev)下后端没开就明确报错，避免偷偷显示旧快照误导用户
+    if (import.meta.env.PROD && typeof window !== 'undefined') {
       try {
         const r = await fetch('/data/matches.json', { cache: 'no-store' })
         if (r.ok) return await r.json()
       } catch {}
+    }
+    if (import.meta.env.DEV) {
+      throw new Error('后端服务未运行：请执行 npm run server（或 npm run dev:all）启动后端后再刷新。本地数据来自后端，后端没开时不显示旧快照。')
     }
     throw e
   }
@@ -45,8 +49,8 @@ export async function fetchMatch(id) {
     const res = await http.get(`/match/${id}`)
     return unwrap(res)
   } catch (e) {
-    // 静态托管（如 CloudStudio）无后端时，回退到部署时抓取的真实快照
-    if (typeof window !== 'undefined') {
+    // 仅静态托管（如 CloudStudio）无后端时回退到快照；本地开发后端没开则明确报错
+    if (import.meta.env.PROD && typeof window !== 'undefined') {
       try {
         const r = await fetch('/data/matches.json', { cache: 'no-store' })
         if (r.ok) {
@@ -56,6 +60,9 @@ export async function fetchMatch(id) {
           if (m) return m
         }
       } catch {}
+    }
+    if (import.meta.env.DEV) {
+      throw new Error('后端服务未运行：请执行 npm run server，再刷新。')
     }
     throw e
   }
