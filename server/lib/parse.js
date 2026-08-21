@@ -152,26 +152,33 @@ export function parseUpstream(payload, opts = {}) {
   }
   const leagues = Array.from(leagueMap.values()).sort((a, b) => a.abbName.localeCompare(b.abbName, "zh"));
 
-  // Sort by match datetime.
-  const sortKey = (m) => `${m.matchDate} ${m.matchTime || "00:00"}`;
+  // 体彩官方排序：同一天内按 matchId 升序(=体彩序号顺序，已验证在售比赛 matchId 升序==matchNumStr 序号升序)，
+  // 与体彩 app 一致；体彩 getFixedBonusV1 不返回 matchNumStr，故用 matchId 统一处理在售与已完赛。跨日按日期方向。
+  const tOf = (m) => m.matchTime || '00:00'
+  // dateDir: 1=日期升序, -1=日期降序；同日内一律按 matchId 升序(体彩序号)
+  const byDateSeq = (dateDir) => (a, b) => {
+    if (a.matchDate !== b.matchDate) return (a.matchDate < b.matchDate ? -1 : 1) * dateDir
+    if (a.matchId !== b.matchId) return a.matchId - b.matchId
+    return tOf(a) < tOf(b) ? -1 : tOf(a) > tOf(b) ? 1 : 0
+  }
   if (opts.sort === "results") {
-    // 赛果优先：已结束的比赛（按时间降序，最新结束的在最上）→ 未开始的比赛（按时间升序，最早开赛的在前）
-    const nowTs = Date.now();
-    const tsOf = (m) => new Date(`${m.matchDate}T${m.matchTime || "00:00"}`).getTime();
-    const isFinished = (m) => m.statusLabel === "已完成" || tsOf(m) < nowTs;
-    const finished = matches.filter(isFinished).sort((a, b) => tsOf(b) - tsOf(a));
-    const upcoming = matches.filter((m) => !isFinished(m)).sort((a, b) => tsOf(a) - tsOf(b));
-    matches = [...finished, ...upcoming];
+    // 赛果优先：已结束(日期降序，同日体彩序号升序) → 未开始(日期升序，同日体彩序号升序)
+    const nowTs = Date.now()
+    const tsOf = (m) => new Date(`${m.matchDate}T${tOf(m)}`).getTime()
+    const isFinished = (m) => m.statusLabel === "已完成" || tsOf(m) < nowTs
+    const finished = matches.filter(isFinished).sort(byDateSeq(-1))
+    const upcoming = matches.filter((m) => !isFinished(m)).sort(byDateSeq(1))
+    matches = [...finished, ...upcoming]
   } else if (opts.sort === "near") {
-    // 临近优先：未来未开赛（按时间升序，最近的在前）→ 已结束（按时间降序，最近的在前）
-    const nowTs = Date.now();
-    const tsOf = (m) => new Date(`${m.matchDate}T${m.matchTime || "00:00"}`).getTime();
-    const future = matches.filter((m) => tsOf(m) >= nowTs).sort((a, b) => tsOf(a) - tsOf(b));
-    const past = matches.filter((m) => tsOf(m) < nowTs).sort((a, b) => tsOf(b) - tsOf(a));
-    matches = [...future, ...past];
+    // 临近优先：未来(日期升序，同日序号升序) → 已结束(日期降序，同日序号升序)
+    const nowTs = Date.now()
+    const tsOf = (m) => new Date(`${m.matchDate}T${tOf(m)}`).getTime()
+    const future = matches.filter((m) => tsOf(m) >= nowTs).sort(byDateSeq(1))
+    const past = matches.filter((m) => tsOf(m) < nowTs).sort(byDateSeq(-1))
+    matches = [...future, ...past]
   } else {
-    const dir = opts.sort === "asc" ? 1 : -1;
-    matches.sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0) * dir);
+    const dir = opts.sort === "asc" ? 1 : -1
+    matches.sort(byDateSeq(dir))
   }
 
   // Pagination.
