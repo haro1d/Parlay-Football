@@ -17,6 +17,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // 不清空 outDir，直接覆盖写入文件——避免 safe-delete 拦截 vite 的清空操作，
+    // 也避免为重建而 mv dist 留下 dist_old 垃圾。新快照 matches.json 会被覆盖更新。
+    emptyOutDir: false,
+  },
   server: {
     port: 5173,
     proxy: {
