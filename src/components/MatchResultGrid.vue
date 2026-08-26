@@ -18,13 +18,10 @@ const POOL_META: Record<string, { name: string; order: number; tag: string }> = 
 
 const ordered = computed(() => {
   if (!props.results?.length) return []
-  const out: { item: MatchResultItem; meta: { name: string; order: number; tag: string } }[] = []
-  for (const r of props.results) {
-    const meta = POOL_META[r.code]
-    if (meta) out.push({ item: r, meta })
-  }
-  out.sort((a, b) => a.meta.order - b.meta.order)
-  return out
+  return [...props.results]
+    .map((r) => ({ item: r, meta: POOL_META[r.code] }))
+    .filter((x) => x.meta)
+    .sort((a, b) => a.meta.order - b.meta.order)
 })
 
 function refundNote(r: MatchResultItem) {

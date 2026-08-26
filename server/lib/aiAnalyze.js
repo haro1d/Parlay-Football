@@ -328,6 +328,7 @@ export async function aiAnalyze(body = {}) {
 
   // 2) 免 Key 模式：基于真实战绩 + 赔率的规则速算（无需任何 API Key）
   if (!apiKey) {
+    console.log('[ai-analysis] 未填 Key → 走免Key规则速算，不调用大模型、不发提示词')
     const analysis = heuristicAnalysis(insight, { homeName, awayName }, hadProbs)
     return {
       success: true,
@@ -343,6 +344,8 @@ export async function aiAnalyze(body = {}) {
   if (!model) return { success: false, error: '缺少模型名称（model）' }
 
   const prompt = buildPrompt(insight, { homeName, awayName }, hadProbs)
+  // 调试用：在后端终端打印即将发给大模型的完整提示词（不在浏览器 Network 里，因为这是后端→大模型的服务器请求）
+  console.log('[ai-analysis] 即将发给大模型的提示词:\n' + prompt)
 
   // 3) 转发到 OpenAI 兼容接口
   const url = `${baseURL}/chat/completions`
@@ -371,20 +374,23 @@ export async function aiAnalyze(body = {}) {
     })
     if (!r.ok) {
       const txt = await r.text().catch(() => '')
-      return { success: false, error: `模型接口返回 ${r.status}：${txt.slice(0, 300)}` }
+      return { success: false, error: `模型接口返回 ${r.status}：${txt.slice(0, 300)}`, _debugPrompt: prompt, _debugPayload: { url, model } }
     }
     const j = await r.json()
     const content = j?.choices?.[0]?.message?.content || ''
-    if (!content) return { success: false, error: '模型未返回内容' }
+    if (!content) return { success: false, error: '模型未返回内容', _debugPrompt: prompt, _debugPayload: { url, model } }
     return {
       success: true,
       analysis: content,
       model,
       source: insight?.source,
       dataBacked: !!(insight && !insight.demo),
+      // 调试用：把发给大模型的完整提示词回带，方便在浏览器 Network→Response 里查看
+      _debugPrompt: prompt,
+      _debugPayload: { url, model, insightSource: insight?.source, insightDemo: !!insight?.demo },
     }
   } catch (e) {
-    return { success: false, error: e?.name === 'AbortError' ? '请求超时（60s）' : e?.message || '请求失败' }
+    return { success: false, error: e?.name === 'AbortError' ? '请求超时（120s）' : e?.message || '请求失败', _debugPrompt: prompt, _debugPayload: { url, model } }
   } finally {
     clearTimeout(timer)
   }

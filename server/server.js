@@ -290,8 +290,8 @@ const server = http.createServer(async (req, res) => {
         res,
         200,
         result.success
-          ? { success: true, data: { analysis: result.analysis, model: result.model, source: result.source, dataBacked: result.dataBacked } }
-          : { success: false, error: result.error },
+          ? { success: true, data: { analysis: result.analysis, model: result.model, source: result.source, dataBacked: result.dataBacked, _debugPrompt: result._debugPrompt, _debugPayload: result._debugPayload } }
+          : { success: false, error: result.error, _debugPrompt: result._debugPrompt, _debugPayload: result._debugPayload },
       )
     }
 

@@ -19,7 +19,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { cleanName } from './clean.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 loadDotEnv()
@@ -104,7 +103,7 @@ function datesBack(n) {
 }
 
 function normName(n) {
-  return cleanName(n)
+  return (n || '').trim()
 }
 
 function pickConfig() {

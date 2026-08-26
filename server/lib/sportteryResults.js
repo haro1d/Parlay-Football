@@ -1,19 +1,13 @@
 // 体彩官方已结束比赛数据源 —— 通过 getFixedBonusV1（单场详情接口，无需签名）扫描
 // matchId 范围，获取所有体彩开售联赛的已结束比赛（含沙特联/日乙/韩K2 等 ESPN 不收录的联赛）。
 //
-// 原理：体彩 matchId 连续递增（按"期/批次"分配，同一期比赛 ID 聚集但高低无序，
-// 例如 8-17 这期的 6 场里，拉科=2040922 最高、其余 5 场却在 2040914~2040918）。
-// getMatchCalculatorV1 只返回在售（Selling）比赛，比赛结束后即从该接口消失，但
-// getFixedBonusV1?clientCode=3001&matchId=<id> 仍可查到该比赛的完整数据
-// （比分 sectionsNo999 + 5 玩法开奖 matchResultList + 历史赔率 oddsHistory）。
-// 因此需「双向」扫描锚点附近的 matchId 区间（向后补低 ID、向前探新 ID），才能完整还原
-// 体彩 app 上"最近已完赛"的全部比赛——只向前扫会漏掉同一期里 ID 偏低的那几场。
-//
-// 比赛日取 oddsHistory 各玩法 hadList/hhadList 等「最后一条」updateDate（即开赛/出票日），
-// 而非首条（首条是赔率初上架日，会早 1~2 天）。
+// 原理：体彩 matchId 连续递增；getMatchCalculatorV1 只返回在售（Selling）比赛，比赛结束后
+// 即从该接口消失，但 getFixedBonusV1?clientCode=3001&matchId=<id> 仍可查到该比赛的
+// 完整数据（比分 sectionsNo999 + 5玩法开奖 matchResultList + 历史赔率 oddsHistory）。
+// 因此扫描近期 matchId 区间，即可还原体彩 app 上"最近已完赛"的全部比赛。
 //
 // 赛果列表接口 getMatchResultV1（jc 路径）被 WAF 403，getMatchResultNewV1（uniform 路径）
-// 需签名，均不可用；故采用 matchId 双向扫描方案。
+// 需签名，均不可用；故采用 matchId 扫描方案。
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -33,13 +27,10 @@ const HEADERS = {
 }
 
 const MEM_TTL = 5 * 60 * 1000 // 内存缓存 5 分钟
-const LIVE_SCAN_SPAN = 2500 // 在售期首次回扫的 matchId 跨度（覆盖近几期）
-const BACKWARD_SPAN = 1200 // 停售期：从锚点向前（低 ID）扫描的跨度，补全同一期里 ID 偏低的场次
-const FORWARD_SPAN = 800 // 停售期：从锚点向后（高 ID）扫描的跨度，探未来新完赛场次
+const FIRST_SCAN_SPAN = 2500 // 首次回扫的 matchId 跨度（覆盖近几日）
 const PRUNE_DAYS = 7 // 持久化保留天数
-const RECENT_DAYS = 7 // 返回近几日的已结束比赛
-const CONCURRENCY = 30 // 并发请求数
-const GAP_STOP = CONCURRENCY // 连续 N 个空 ID 即判定越过真实 frontier，提前结束该方向扫描
+const RECENT_DAYS = 3 // 返回近几日的已结束比赛
+const CONCURRENCY = 40 // 并发请求数
 
 let memCache = { at: 0, data: null }
 let bgScan = null // 后台扫描 promise（防止并发重复扫描）
@@ -67,26 +58,18 @@ async function fetchFixedBonus(matchId) {
   }
 }
 
-// 从赔率历史列表中取「最新一条」updateDate/updateTime 作为比赛日（即开赛/出票日）。
-// 体彩各玩法 hadList 的首条是赔率初上架日（常早于比赛日 1~2 天），末条才是最接近开赛的更新，
-// 因此遍历所有玩法的全部条目，取 updateDate（同日期再比 updateTime）最大者。
-function maxUpdateFromLists(oh) {
-  let bestDate = ''
-  let bestTime = '00:00'
+// 从赔率历史列表中取最后一条 updateDate/updateTime 作为比赛日近似。
+function lastUpdateFromLists(oh) {
   for (const key of ['hadList', 'hhadList', 'crsList', 'ttgList', 'hafuList']) {
     const arr = oh[key]
-    if (!Array.isArray(arr)) continue
-    for (const item of arr) {
-      if (!item || !item.updateDate) continue
-      const d = str(item.updateDate)
-      const t = str(item.updateTime)
-      if (d > bestDate || (d === bestDate && t > bestTime)) {
-        bestDate = d
-        bestTime = t.slice(0, 5) || '00:00'
+    if (Array.isArray(arr) && arr.length) {
+      const last = arr[arr.length - 1]
+      if (last && last.updateDate) {
+        return { date: str(last.updateDate), time: str(last.updateTime).slice(0, 5) || '00:00' }
       }
     }
   }
-  return { date: bestDate, time: bestTime }
+  return { date: '', time: '00:00' }
 }
 
 // 将 getFixedBonusV1 返回转成与 toMatchEspn 兼容的 match 对象。
@@ -103,7 +86,7 @@ function parseMatch(value) {
   // 已结束 = 有有效比分 且 有开奖结果
   if (!score || score === '无效场次' || !/\d/.test(score) || !mr.length) return null
 
-  const { date: matchDate, time: matchTime } = maxUpdateFromLists(oh)
+  const { date: matchDate, time: matchTime } = lastUpdateFromLists(oh)
 
   return {
     matchId: Number(oh.matchId) || 0,
@@ -147,15 +130,11 @@ function parseMatch(value) {
 
 function loadStore() {
   try {
-    if (!existsSync(STORE_FILE)) return { lastScannedMaxId: 0, lastScannedMinId: 0, matches: {} }
+    if (!existsSync(STORE_FILE)) return { lastScannedMaxId: 0, matches: {} }
     const j = JSON.parse(readFileSync(STORE_FILE, 'utf8'))
-    return {
-      lastScannedMaxId: j.lastScannedMaxId || 0,
-      lastScannedMinId: j.lastScannedMinId || 0,
-      matches: j.matches || {},
-    }
+    return { lastScannedMaxId: j.lastScannedMaxId || 0, matches: j.matches || {} }
   } catch {
-    return { lastScannedMaxId: 0, lastScannedMinId: 0, matches: {} }
+    return { lastScannedMaxId: 0, matches: {} }
   }
 }
 
@@ -180,40 +159,16 @@ async function mapLimit(items, limit, fn) {
   return ret
 }
 
-// 扫描一个方向：direction='forward' 时 id 从 fromId 递增到 toId；'backward' 时从 fromId 递减到 toId。
-// 一旦已找到过比赛、且连续 GAP_STOP 个 ID 均为空，即认为越过真实 frontier，提前结束该方向，避免无限请求。
-// 双向各自独立 early-stop：中间出现空隙不会误杀另一方向。扫描后把实际命中的最大/最小 matchId 写回 store，
-// 作为下次扫描的锚点（增量，避免每次全量重扫）。
-async function scanRange(fromId, toId, store, direction = 'forward') {
-  let maxFoundId = store.lastScannedMaxId
-  let minFoundId = store.lastScannedMinId || 0
-  let gap = 0
-  const step = direction === 'forward' ? 1 : -1
-  const inRange = direction === 'forward' ? (i) => i <= toId : (i) => i >= toId
-  let id = fromId
-  while (inRange(id)) {
-    const batch = []
-    for (let k = 0; k < CONCURRENCY && inRange(id); k++) {
-      batch.push(id)
-      id += step
-    }
-    const ms = await mapLimit(batch, CONCURRENCY, async (x) => parseMatch(await fetchFixedBonus(x)))
-    for (const m of ms) {
-      if (m) {
-        store.matches[m.matchId] = m
-        if (m.matchId > maxFoundId) maxFoundId = m.matchId
-        if (!minFoundId || m.matchId < minFoundId) minFoundId = m.matchId
-        gap = 0
-      } else if (maxFoundId > 0 && minFoundId > 0) {
-        gap++
-      }
-    }
-    if (maxFoundId > 0 && minFoundId > 0 && gap >= GAP_STOP) break
+async function scanRange(fromId, toId, store) {
+  const ids = []
+  for (let id = fromId; id <= toId; id++) ids.push(id)
+  const results = await mapLimit(ids, CONCURRENCY, async (id) =>
+    parseMatch(await fetchFixedBonus(id)),
+  )
+  for (const m of results) {
+    if (m) store.matches[m.matchId] = m
   }
-  store.lastScannedMaxId = Math.max(store.lastScannedMaxId, maxFoundId)
-  if (minFoundId > 0) {
-    store.lastScannedMinId = store.lastScannedMinId ? Math.min(store.lastScannedMinId, minFoundId) : minFoundId
-  }
+  store.lastScannedMaxId = toId
 }
 
 function pruneOld(store) {
@@ -233,41 +188,16 @@ function pruneOld(store) {
 export async function getSportteryFinished(currentMaxId) {
   if (memCache.data && Date.now() - memCache.at < MEM_TTL) return memCache.data
 
-  if (!bgScan) {
+  if (!bgScan && currentMaxId) {
     bgScan = (async () => {
       try {
         const store = loadStore()
-        if (currentMaxId && currentMaxId > 0) {
-          // 在售接口可用：向前扫新完赛场次。
-          // 注意上界必须超出 currentMaxId 一段缓冲：刚完赛的场次会立即掉出在售列表，
-          // 但其 matchId 往往高于「当前在售最大 ID」（例如萨迪纳摩 2040950 > 在售最大 2040947），
-          // 若只扫到 currentMaxId 就会漏掉它们。靠 GAP_STOP（连续 30 个空 ID）提前结束，避免无效请求。
-          const fFrom = store.lastScannedMaxId
-            ? store.lastScannedMaxId + 1
-            : Math.max(1, currentMaxId - LIVE_SCAN_SPAN)
-          const fTo = currentMaxId + FORWARD_SPAN
-          if (fFrom <= fTo) await scanRange(fFrom, fTo, store, 'forward')
-          const bFrom = store.lastScannedMaxId ? store.lastScannedMaxId - 1 : currentMaxId - 1
-          const bTo = store.lastScannedMinId
-            ? store.lastScannedMinId - 1
-            : Math.max(1, (store.lastScannedMaxId || currentMaxId) - LIVE_SCAN_SPAN)
-          if (bFrom >= bTo) await scanRange(bFrom, bTo, store, 'backward')
-        } else {
-          // 停售 / 无在售锚点：以持久化锚点为中心双向扫描。
-          const maxId = store.lastScannedMaxId || 0
-          if (maxId > 0) {
-            // 向后（高 ID）探未来新完赛场次
-            const fFrom = maxId + 1
-            const fTo = maxId + FORWARD_SPAN
-            await scanRange(fFrom, fTo, store, 'forward')
-            // 向前（低 ID）补全同一期里 ID 偏低的场次（关键：拉科那期其余 5 场就在下方）
-            const bFrom = maxId - 1
-            const bTo = Math.max(1, store.lastScannedMinId ? store.lastScannedMinId - 1 : maxId - BACKWARD_SPAN)
-            if (bFrom >= bTo) await scanRange(bFrom, bTo, store, 'backward')
-          } else {
-            // 完全没有锚点：做一次向前扫描建立初始锚点
-            await scanRange(1, FORWARD_SPAN, store, 'forward')
-          }
+        // 首次：回扫 [maxId - FIRST_SCAN_SPAN, maxId]；后续：增量扫 [last+1, maxId]
+        const fromId = store.lastScannedMaxId
+          ? store.lastScannedMaxId + 1
+          : Math.max(1, currentMaxId - FIRST_SCAN_SPAN)
+        if (fromId <= currentMaxId) {
+          await scanRange(fromId, currentMaxId, store)
         }
         pruneOld(store)
         saveStore(store)
