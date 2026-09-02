@@ -26,17 +26,32 @@ const HEADERS = {
   Accept: 'application/json, text/plain, */*',
 }
 
-const MEM_TTL = 5 * 60 * 1000 // 内存缓存 5 分钟
-const FIRST_SCAN_SPAN = 2500 // 首次回扫的 matchId 跨度（覆盖近几日）
-const PRUNE_DAYS = 7 // 持久化保留天数
-const RECENT_DAYS = 3 // 返回近几日的已结束比赛
+const MEM_TTL = 5 * 60 * 1000 // 内存缓存 5 分钟（过期后仍可返回旧数据，仅控制是否触发重扫）
+const RESCAN_SPAN = 2500 // 每次重扫的 matchId 跨度（覆盖近 7-10 天，含已结束比赛）
+const RESCAN_THROTTLE = 12 * 60 * 1000 // 全量重扫节流：12 分钟内不重复扫
+const PRUNE_DAYS = 10 // 持久化保留天数
+const RECENT_DAYS = 5 // 返回近几日的已结束比赛
 const CONCURRENCY = 40 // 并发请求数
 
 let memCache = { at: 0, data: null }
 let bgScan = null // 后台扫描 promise（防止并发重复扫描）
+let lastScanAt = 0 // 上次扫描启动时间戳
 
 function str(v) {
   return v === null || v === undefined ? '' : String(v)
+}
+
+// 本地日期串（中国时区 +8），用于过滤"未来日期"脏数据 + 近 N 天截断。
+// getFixedBonusV1 对部分未来开售的 matchId 会返回历史比分 + 未来 updateDate，
+// 这类数据虽带比分但比赛日为未来，会误导用户，需过滤掉。
+// offsetDays: 0=今天，负数=过去 N 天，正数=未来 N 天
+function localDateStr(offsetDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 async function fetchFixedBonus(matchId) {
@@ -87,6 +102,11 @@ function parseMatch(value) {
   if (!score || score === '无效场次' || !/\d/.test(score) || !mr.length) return null
 
   const { date: matchDate, time: matchTime } = lastUpdateFromLists(oh)
+
+  // 过滤"未来日期"脏数据：getFixedBonusV1 对部分未来开售的 matchId 会返回
+  // 历史比分 + 未来 updateDate，这类数据比赛日为未来，不应作为"已结束"展示。
+  const today = localDateStr(0)
+  if (matchDate && matchDate > today) return null
 
   return {
     matchId: Number(oh.matchId) || 0,
@@ -172,9 +192,7 @@ async function scanRange(fromId, toId, store) {
 }
 
 function pruneOld(store) {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - PRUNE_DAYS)
-  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  const cutoffStr = localDateStr(-PRUNE_DAYS)
   for (const id of Object.keys(store.matches)) {
     const m = store.matches[id]
     if (m.matchDate && m.matchDate < cutoffStr) delete store.matches[id]
@@ -183,31 +201,40 @@ function pruneOld(store) {
 
 // 返回近 RECENT_DAYS 天的体彩官方已结束比赛。
 // currentMaxId：当前在售比赛的最大 matchId（来自 getMatchCalculatorV1）。
-// 首次调用时后台异步扫描（约 15-20s），立即返回 null（由调用方 fallback 到 ESPN）；
-// 扫描完成后填入内存缓存，后续调用直接读缓存。
+//
+// 扫描策略：每次都重扫 [currentMaxId - RESCAN_SPAN, currentMaxId] 近期窗口（而非
+// 单向增量）。原因：体彩 matchId 按时间递增，但比赛结束后才在 getFixedBonusV1
+// 出现比分；若首次扫描时比赛尚未结束（无比分被过滤），增量模式（lastId+1→maxId）
+// 永不回头补扫，导致昨日的已结束比赛缺失。重扫窗口可让"刚结束"的比赛被补上。
+//
+// 节流：RESCAN_THROTTLE 内不重复全量扫描；期间返回旧缓存（若有），首次返回 null
+// 由调用方 fallback 到 ESPN。
 export async function getSportteryFinished(currentMaxId) {
+  // 缓存未过期：直接返回
   if (memCache.data && Date.now() - memCache.at < MEM_TTL) return memCache.data
 
-  if (!bgScan && currentMaxId) {
+  // 节流期内：返回旧缓存（可能为 null），不重复扫描
+  const shouldRescan = !bgScan && currentMaxId && Date.now() - lastScanAt > RESCAN_THROTTLE
+  if (shouldRescan) {
+    lastScanAt = Date.now()
     bgScan = (async () => {
       try {
         const store = loadStore()
-        // 首次：回扫 [maxId - FIRST_SCAN_SPAN, maxId]；后续：增量扫 [last+1, maxId]
-        const fromId = store.lastScannedMaxId
-          ? store.lastScannedMaxId + 1
-          : Math.max(1, currentMaxId - FIRST_SCAN_SPAN)
+        // 每次重扫近期窗口（覆盖近 7-10 天），补上"刚结束"的比赛
+        const fromId = Math.max(1, currentMaxId - RESCAN_SPAN)
         if (fromId <= currentMaxId) {
           await scanRange(fromId, currentMaxId, store)
         }
         pruneOld(store)
         saveStore(store)
 
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() - RECENT_DAYS)
-        const cutoffStr = cutoff.toISOString().slice(0, 10)
-        const recent = Object.values(store.matches).filter(
-          (m) => !m.matchDate || m.matchDate >= cutoffStr,
-        )
+        const cutoffStr = localDateStr(-RECENT_DAYS)
+        const todayStr = localDateStr(0)
+        const recent = Object.values(store.matches)
+          // 近 RECENT_DAYS 天 且 不晚于今天（过滤未来日期脏数据，双重保险）
+          .filter((m) => !m.matchDate || (m.matchDate >= cutoffStr && m.matchDate <= todayStr))
+          // 按 matchDate 降序：最近结束的在前
+          .sort((a, b) => (b.matchDate || '').localeCompare(a.matchDate || ''))
         memCache = { at: Date.now(), data: recent }
       } catch {
         // 扫描失败：保留旧缓存（若有）
