@@ -233,8 +233,8 @@ export async function getSportteryFinished(currentMaxId) {
         const recent = Object.values(store.matches)
           // 近 RECENT_DAYS 天 且 不晚于今天（过滤未来日期脏数据，双重保险）
           .filter((m) => !m.matchDate || (m.matchDate >= cutoffStr && m.matchDate <= todayStr))
-          // 按 matchDate 降序：最近结束的在前
-          .sort((a, b) => (b.matchDate || '').localeCompare(a.matchDate || ''))
+        // 顺序交由 parseUpstream 的 byDateSeq 统一排序（同日 matchId 升序=体彩序号，
+        // 与体彩 app 一致）；这里保持 matchId 升序的自然插入顺序，不额外排序。
         memCache = { at: Date.now(), data: recent }
       } catch {
         // 扫描失败：保留旧缓存（若有）
