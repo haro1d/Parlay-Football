@@ -23,7 +23,7 @@ export default defineConfig({
     emptyOutDir: false,
   },
   server: {
-    port: 5173,
+    port: 6173,
     proxy: {
       // Forward API calls to the local 竞彩 backend (server/server.js)
       '/api': {
